@@ -31,10 +31,9 @@ CREATE TABLE IF NOT EXISTS ebd_ekbd.license
     ssub_rf_code character varying,
     ssub_rf_id uuid,
     arctic_zone_id uuid DEFAULT NULL,
-    S_license numeric(12,3),
+    s_license numeric(12,3),
     
     comment character varying DEFAULT NULL,
-    geom geometry(Geometry,7683),
     src_hash character varying GENERATED ALWAYS AS (md5(
 													(
 													COALESCE(name, '') || COALESCE(series, '') || COALESCE(number, '')
@@ -49,6 +48,7 @@ CREATE TABLE IF NOT EXISTS ebd_ekbd.license
                                                     STORED NOT NULL,
 	cdate timestamp DEFAULT now(), 						
     mdate timestamp DEFAULT now(),
+	geom geometry(Geometry,7683),
 	
     CONSTRAINT license_pkey PRIMARY KEY (id),
 	CONSTRAINT license_vid_fkey FOREIGN KEY (vid) REFERENCES ebd_ekbd.license,                                              -- ?
@@ -61,18 +61,16 @@ CREATE TABLE IF NOT EXISTS ebd_ekbd.license
 	CONSTRAINT license_dic_arctic_zone_fkey FOREIGN KEY (arctic_zone_id) REFERENCES ebd_ekbd.dic_arctic_zone(id)
 );
 
-
-
 CREATE INDEX IF NOT EXISTS idx_license ON ebd_ekbd.license USING gist (geom) TABLESPACE pg_default;
 
-
+CREATE OR REPLACE TRIGGER license_mdate_update BEFORE UPDATE ON ebd_ekbd.license
+    FOR EACH ROW
+    EXECUTE PROCEDURE ebd_ekbd.f_update_mdate();
 
 ALTER TABLE IF EXISTS ebd_ekbd.license OWNER to ebd;
 REVOKE ALL ON TABLE ebd_ekbd.license FROM ebd_integro;
 GRANT ALL ON TABLE ebd_ekbd.license TO ebd;
 GRANT SELECT ON TABLE ebd_ekbd.license TO ebd_integro;
-
-
 
 COMMENT ON TABLE ebd_ekbd.license IS 'Лицензии';
 COMMENT ON COLUMN ebd_ekbd.license.name IS 'Название участка';
