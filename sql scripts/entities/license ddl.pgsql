@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS ebd_ekbd.license
 													|| COALESCE(suser, '') || COALESCE(suser_inn, '')|| COALESCE(suser_adr, '')
 													|| COALESCE(founder, '') || COALESCE(pcomp, '') || COALESCE(prev_license_id::text, '') 
 													|| COALESCE(ssub_rf_code, '') || COALESCE(ssub_rf_id::text, '') || COALESCE(arctic_zone_id::text, '') 
-                                                    || COALESCE(S_license::text, '') || COALESCE(comment, '') || COALESCE(geom::text, '') 
+                                                    || COALESCE(s_license::text, '') || COALESCE(comment, '') || COALESCE(geom::text, '') 
 													)::text
 													))
                                                     STORED NOT NULL,
@@ -92,7 +92,7 @@ COMMENT ON COLUMN ebd_ekbd.license.prev_license_id IS 'Предыдущая ди
 COMMENT ON COLUMN ebd_ekbd.license.ssub_rf_code IS 'Код субъекта';
 COMMENT ON COLUMN ebd_ekbd.license.ssub_rf_id IS 'Субъект';
 COMMENT ON COLUMN ebd_ekbd.license.arctic_zone_id IS 'Арктическая зона';
-COMMENT ON COLUMN ebd_ekbd.license.S_license IS 'Площадь';
+COMMENT ON COLUMN ebd_ekbd.license.s_license IS 'Площадь';
 COMMENT ON COLUMN ebd_ekbd.license.comment IS 'Примечание';
 COMMENT ON COLUMN ebd_ekbd.license.geom IS 'Геометрия';
 COMMENT ON COLUMN ebd_ekbd.license.cdate IS 'Дата создания';
