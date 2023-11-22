@@ -8,5 +8,5 @@ class EbdEkbdEntityModel extends Model
 {
     const CREATED_AT = 'cdate';
     const UPDATED_AT = 'mdate';
-    protected $guarded = ['id'];
+    protected $guarded = [];
 }
