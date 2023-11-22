@@ -22,6 +22,7 @@ use App\Http\Controllers\ImportControllers\DicNgoTypeImportController;
 use App\Http\Controllers\ImportControllers\DicNgrTypeImportController;
 use App\Http\Controllers\ImportControllers\DicSsubRfImportController;
 use App\Http\Controllers\ImportControllers\LicenseImportController;
+use App\Http\Controllers\ImportControllers\FlangImportController;
 use Illuminate\Console\Command;
 
 class ImportCommand extends Command
@@ -68,6 +69,7 @@ class ImportCommand extends Command
                 DicNgrTypeImportController::import();
                 DicSsubRfImportController::import();
                 LicenseImportController::import();
+                FlangImportController::import();
                 dump( 'done' );
                 break;
 
@@ -190,6 +192,12 @@ class ImportCommand extends Command
             case 'license':
                 dump( 'Импорт license' );
                 LicenseImportController::import();
+                dump( 'done' );
+                break;  
+
+            case 'flang':
+                dump( 'Импорт flang' );
+                FlangImportController::import();
                 dump( 'done' );
                 break;  
 
