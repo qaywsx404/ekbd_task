@@ -16,7 +16,6 @@ CREATE TABLE IF NOT EXISTS ebd_ekbd.ngp (
     index_all character varying,
     				
 	comment character varying DEFAULT NULL,					
-    geom geometry(MultiPolygon, 987654),
 	src_hash character varying GENERATED ALWAYS AS (md5(
                                                     (
                                                     COALESCE(name, '') || COALESCE(ngp_type_id::text, '')
@@ -26,24 +25,23 @@ CREATE TABLE IF NOT EXISTS ebd_ekbd.ngp (
                                                     STORED NOT NULL,
 	cdate timestamp DEFAULT now(), 				
     mdate timestamp DEFAULT now(),
+	geom geometry(MultiPolygon, 987654),
 
 	CONSTRAINT ngp_pkey PRIMARY KEY (id),
     CONSTRAINT ngp_vid_fkey FOREIGN KEY (vid) REFERENCES ebd_ekbd.ngp,  
 	CONSTRAINT ngp_dic_ngp_type_fkey FOREIGN KEY (ngp_type_id) REFERENCES ebd_ekbd.dic_ngp_type(id)
 );
 
-
-
 CREATE INDEX IF NOT EXISTS idx_ngp ON ebd_ekbd.ngp USING gist (geom) TABLESPACE pg_default;
 
-
+CREATE OR REPLACE TRIGGER ngp_mdate_update BEFORE UPDATE ON ebd_ekbd.ngp
+    FOR EACH ROW
+    EXECUTE PROCEDURE ebd_ekbd.f_update_mdate();
 
 ALTER TABLE IF EXISTS ebd_ekbd.ngp OWNER to ebd;
 REVOKE ALL ON TABLE ebd_ekbd.ngp FROM ebd_integro;
 GRANT ALL ON TABLE ebd_ekbd.ngp TO ebd;
 GRANT SELECT ON TABLE ebd_ekbd.ngp TO ebd_integro;
-
-
 
 COMMENT ON TABLE ebd_ekbd.ngp IS 'НГП';
 COMMENT ON COLUMN ebd_ekbd.ngp.name IS 'Название';

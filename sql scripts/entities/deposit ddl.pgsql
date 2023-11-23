@@ -28,7 +28,6 @@ CREATE TABLE IF NOT EXISTS ebd_ekbd.deposit (
 
 	comment character varying DEFAULT NULL,
 	note character varying DEFAULT NULL,
-    geom geometry(MultiPolygon,7683),
 	src_hash character varying GENERATED ALWAYS AS (md5(
                                                     (
                                                     COALESCE(name, '') || COALESCE(deposit_type_id::text, '') || COALESCE(deposit_stage_id::text, '')
@@ -42,6 +41,7 @@ CREATE TABLE IF NOT EXISTS ebd_ekbd.deposit (
                                                     STORED NOT NULL,
 	cdate timestamp DEFAULT now(), 		
     mdate timestamp DEFAULT now(),
+	geom geometry(MultiPolygon,7683),
 
 	CONSTRAINT deposit_pkey PRIMARY KEY (id),
     CONSTRAINT deposit_vid_fkey FOREIGN KEY (vid) REFERENCES ebd_ekbd.deposit,
@@ -59,18 +59,16 @@ CREATE TABLE IF NOT EXISTS ebd_ekbd.deposit (
 	CONSTRAINT deposit_dic_deposit_k_substance_fkey FOREIGN KEY (deposit_k_substance_id) REFERENCES ebd_ekbd.dic_deposit_substance(id)
 );
 
-
-
 CREATE INDEX IF NOT EXISTS idx_deposit ON ebd_ekbd.deposit USING gist (geom) TABLESPACE pg_default;
 
-
+CREATE OR REPLACE TRIGGER deposit_mdate_update BEFORE UPDATE ON ebd_ekbd.deposit
+    FOR EACH ROW
+    EXECUTE PROCEDURE ebd_ekbd.f_update_mdate();
 
 ALTER TABLE IF EXISTS ebd_ekbd.deposit OWNER to ebd;
 REVOKE ALL ON TABLE ebd_ekbd.deposit FROM ebd_integro;
 GRANT ALL ON TABLE ebd_ekbd.deposit TO ebd;
 GRANT SELECT ON TABLE ebd_ekbd.deposit TO ebd_integro;
-
-
 
 COMMENT ON TABLE ebd_ekbd.deposit IS 'Месторождения нефти и газа';
 COMMENT ON COLUMN ebd_ekbd.deposit.name IS 'Название';

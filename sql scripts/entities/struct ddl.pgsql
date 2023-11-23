@@ -34,7 +34,6 @@ CREATE TABLE IF NOT EXISTS ebd_ekbd.struct (
     rdl_k numeric(12,3),
 
 	comment character varying DEFAULT NULL,
-    geom geometry(MultiPolygon,7683),
 	src_hash character varying GENERATED ALWAYS AS (md5(
                                                     (
                                                     COALESCE(name, '') || COALESCE(deposit_type_id::text, '') || COALESCE(deposit_stage_id::text, '')
@@ -50,6 +49,7 @@ CREATE TABLE IF NOT EXISTS ebd_ekbd.struct (
                                                      STORED NOT NULL,
 	cdate timestamp DEFAULT now(), 		
     mdate timestamp DEFAULT now(),
+	geom geometry(MultiPolygon,7683),
 
 	CONSTRAINT struct_pkey PRIMARY KEY (id),
     CONSTRAINT struct_vid_fkey FOREIGN KEY (vid) REFERENCES ebd_ekbd.struct,
@@ -63,18 +63,16 @@ CREATE TABLE IF NOT EXISTS ebd_ekbd.struct (
 	CONSTRAINT struct_dic_arctic_zone_fkey FOREIGN KEY (arctic_zone_id) REFERENCES ebd_ekbd.dic_arctic_zone(id)
 );
 
-
-
 CREATE INDEX IF NOT EXISTS idx_struct ON ebd_ekbd.struct USING gist (geom) TABLESPACE pg_default;
 
-
+CREATE OR REPLACE TRIGGER struct_mdate_update BEFORE UPDATE ON ebd_ekbd.struct
+    FOR EACH ROW
+    EXECUTE PROCEDURE ebd_ekbd.f_update_mdate();
 
 ALTER TABLE IF EXISTS ebd_ekbd.struct OWNER to ebd;
 REVOKE ALL ON TABLE ebd_ekbd.struct FROM ebd_integro;
 GRANT ALL ON TABLE ebd_ekbd.struct TO ebd;
 GRANT SELECT ON TABLE ebd_ekbd.struct TO ebd_integro;
-
-
 
 COMMENT ON TABLE ebd_ekbd.struct IS 'Нефтегазоперспективные структуры';
 COMMENT ON COLUMN ebd_ekbd.struct.name IS 'Название';

@@ -31,7 +31,6 @@ CREATE TABLE IF NOT EXISTS ebd_ekbd.konkurs
     resource_k character varying DEFAULT NULL,
 	
     comment character varying DEFAULT NULL,
-    geom geometry(MultiPolygon,7683),
 	src_hash character varying GENERATED ALWAYS AS (md5(
                                                     (
                                                     COALESCE(name, '') || COALESCE(license_type_id::text, '') || COALESCE(konkurs_pi_id::text, '')
@@ -45,6 +44,7 @@ CREATE TABLE IF NOT EXISTS ebd_ekbd.konkurs
                                                     STORED NOT NULL,
 	cdate timestamp DEFAULT now(),
     mdate timestamp DEFAULT now(),
+	geom geometry(MultiPolygon,7683),
 
 	CONSTRAINT konkurs_pkey PRIMARY KEY (id),
     CONSTRAINT konkurs_vid_fkey FOREIGN KEY (vid) REFERENCES ebd_ekbd.konkurs,               
@@ -56,20 +56,16 @@ CREATE TABLE IF NOT EXISTS ebd_ekbd.konkurs
 	CONSTRAINT konkurs_prev_konkurs_fkey FOREIGN KEY (prev_konkurs_id) REFERENCES ebd_ekbd.konkurs(id)
 );
 
-
-
-
 CREATE INDEX IF NOT EXISTS idx_konkurs ON ebd_ekbd.konkurs USING gist (geom) TABLESPACE pg_default;
 
-
-
+CREATE OR REPLACE TRIGGER konkurs_mdate_update BEFORE UPDATE ON ebd_ekbd.konkurs
+    FOR EACH ROW
+    EXECUTE PROCEDURE ebd_ekbd.f_update_mdate();
 
 ALTER TABLE IF EXISTS ebd_ekbd.konkurs OWNER to ebd;
 REVOKE ALL ON TABLE ebd_ekbd.konkurs FROM ebd_integro;
 GRANT ALL ON TABLE ebd_ekbd.konkurs TO ebd;
 GRANT SELECT ON TABLE ebd_ekbd.konkurs TO ebd_integro;
-
-
 
 COMMENT ON TABLE ebd_ekbd.konkurs IS 'Участки, предлагаемые к лицензированию';
 COMMENT ON COLUMN ebd_ekbd.konkurs.name IS 'Название';

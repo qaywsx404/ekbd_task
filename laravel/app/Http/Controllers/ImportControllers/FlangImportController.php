@@ -17,13 +17,13 @@ class FlangImportController extends Controller
     {
         $newCount = $unsavedCount = 0;
 
-        [$newCount, $unsavedCount] = self::importFromLicTable();
+        [$newCount, $unsavedCount] = self::importFromTable();
 
         dump("Flang total: Added " . $newCount . ', unsaved ' . $unsavedCount);
     }
 
     /**  Импорт записей из таблицы  ebd_gis.flangi */
-    private static function importFromLicTable() : array
+    private static function importFromTable() : array
     {
         $newCount = $unsavedCount = 0;
 

@@ -22,7 +22,6 @@ CREATE TABLE IF NOT EXISTS ebd_ekbd.zapovednik (
     rdate date,
 
 	comment character varying DEFAULT NULL,
-    geom geometry(MultiPolygon,7683),
 	src_hash character varying GENERATED ALWAYS AS (md5(
                                                     (
                                                     COALESCE(name, '') || COALESCE(zapovednik_category_id::text, '') || COALESCE(zapovednik_importance_id::text, '')
@@ -34,6 +33,7 @@ CREATE TABLE IF NOT EXISTS ebd_ekbd.zapovednik (
                                                      STORED NOT NULL,
 	cdate timestamp DEFAULT now(), 		
     mdate timestamp DEFAULT now(),
+	geom geometry(MultiPolygon,7683),
 
 	CONSTRAINT zapovednik_pkey PRIMARY KEY (id),
     CONSTRAINT zapovednik_vid_fkey FOREIGN KEY (vid) REFERENCES ebd_ekbd.zapovednik,
@@ -44,18 +44,16 @@ CREATE TABLE IF NOT EXISTS ebd_ekbd.zapovednik (
 	CONSTRAINT zapovednik_dic_ssub_rf_fkey FOREIGN KEY (ssub_rf_id) REFERENCES ebd_ekbd.dic_ssub_rf(id)
 );
 
-
-
 CREATE INDEX IF NOT EXISTS idx_zapovednik ON ebd_ekbd.zapovednik USING gist (geom) TABLESPACE pg_default;
 
-
+CREATE OR REPLACE TRIGGER zapovednik_mdate_update BEFORE UPDATE ON ebd_ekbd.zapovednik
+    FOR EACH ROW
+    EXECUTE PROCEDURE ebd_ekbd.f_update_mdate();
 
 ALTER TABLE IF EXISTS ebd_ekbd.zapovednik OWNER to ebd;
 REVOKE ALL ON TABLE ebd_ekbd.zapovednik FROM ebd_integro;
 GRANT ALL ON TABLE ebd_ekbd.zapovednik TO ebd;
 GRANT SELECT ON TABLE ebd_ekbd.zapovednik TO ebd_integro;
-
-
 
 COMMENT ON TABLE ebd_ekbd.zapovednik IS 'Особо охраняемые территории (заповедники)';
 COMMENT ON COLUMN ebd_ekbd.zapovednik.name IS 'Название';

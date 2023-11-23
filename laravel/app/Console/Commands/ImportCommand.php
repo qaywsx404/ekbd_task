@@ -23,6 +23,13 @@ use App\Http\Controllers\ImportControllers\DicNgrTypeImportController;
 use App\Http\Controllers\ImportControllers\DicSsubRfImportController;
 use App\Http\Controllers\ImportControllers\LicenseImportController;
 use App\Http\Controllers\ImportControllers\FlangImportController;
+use App\Http\Controllers\ImportControllers\NgpImportController;
+use App\Http\Controllers\ImportControllers\NgoImportController;
+use App\Http\Controllers\ImportControllers\NgrImportController;
+use App\Http\Controllers\ImportControllers\DepositImportController;
+use App\Http\Controllers\ImportControllers\KonkursImportController;
+use App\Http\Controllers\ImportControllers\StructImportController;
+use App\Http\Controllers\ImportControllers\ZapovednikImportController;
 use Illuminate\Console\Command;
 
 class ImportCommand extends Command
@@ -70,6 +77,13 @@ class ImportCommand extends Command
                 DicSsubRfImportController::import();
                 LicenseImportController::import();
                 FlangImportController::import();
+                NgpImportController::import();
+                NgoImportController::import();
+                NgrImportController::import();
+                DepositImportController::import();
+                KonkursImportController::import();
+                StructImportController::import();
+                ZapovednikImportController::import();
                 dump( 'done' );
                 break;
 
@@ -198,6 +212,48 @@ class ImportCommand extends Command
             case 'flang':
                 dump( 'Импорт flang' );
                 FlangImportController::import();
+                dump( 'done' );
+                break;
+            
+            case 'ngp':
+                dump( 'Импорт ngp' );
+                NgpImportController::import();
+                dump( 'done' );
+                break;
+
+            case 'ngo':
+                dump( 'Импорт ngo' );
+                NgoImportController::import();
+                dump( 'done' );
+                break;
+
+            case 'ngr':
+                dump( 'Импорт ngr' );
+                NgrImportController::import();
+                dump( 'done' );
+                break;  
+
+            case 'deposit':
+                dump( 'Импорт deposit' );
+                DepositImportController::import();
+                dump( 'done' );
+                break;  
+
+            case 'konkurs':
+                dump( 'Импорт konkurs' );
+                KonkursImportController::import();
+                dump( 'done' );
+                break;
+
+            case 'zapovednik':
+                dump( 'Импорт zapovednik' );
+                ZapovednikImportController::import();
+                dump( 'done' );
+                break;  
+
+            case 'struct':
+                dump( 'Импорт struct' );
+                StructImportController::import();
                 dump( 'done' );
                 break;  
 
