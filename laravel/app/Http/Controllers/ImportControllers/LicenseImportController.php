@@ -10,59 +10,77 @@ use App\Models\ebd_ekbd\dictionaries\DicPurpose;
 use App\Models\ebd_ekbd\dictionaries\DicReason;
 use App\Models\ebd_ekbd\dictionaries\DicSsubRf;
 use App\Models\ebd_ekbd\License;
+use App\Models\ebd_ekbd\rel\RelLicensePi;
 use ErrorException;
 use Exception;
 
 class LicenseImportController extends Controller
 {
-    /** licWithUnfoundndPrevLic */
+    /** Лицензии с ненайдеными прев. лиц. */
     private static $unfLics = [];
+    /** Показывать ли доп. инф. */
+    private static $showInf = false;
     
-    public static function import()
+    /**
+     * Начать импорт
+     * 
+     * @param bool $showInf  `true`  - показывать доп. инф.
+     *                       `false` - не показывать доп. инф.
+     */
+    public static function import(bool $showInf = false)
     {
-        
-        $newCount = $unsavedCount = 0;
+        self::$showInf = $showInf;
+        $newCount = $unsavedCount = $RelNewCount = 0;
 
-        //lic_exp_ln
+        // lic_exp_ln
         $a = self::importFromLicTable('LicExpLn');
-            $newCount += $a[0]; $unsavedCount += $a[1];
-        //lic_exp_pln
+            $newCount += $a[0]; $unsavedCount += $a[1]; $RelNewCount += $a[2];
+        // lic_exp_pln
         $a = self::importFromLicTable('LicExpPln');
-            $newCount += $a[0]; $unsavedCount += $a[1];
-        // //lic_exp_pt
+            $newCount += $a[0]; $unsavedCount += $a[1]; $RelNewCount += $a[2];
+        // lic_exp_pt
         $a = self::importFromLicTable('LicExpPt');
-            $newCount += $a[0]; $unsavedCount += $a[1];
-        // //lic_pln
+            $newCount += $a[0]; $unsavedCount += $a[1]; $RelNewCount += $a[2];
+        // lic_pln
         $a = self::importFromLicTable('LicPln');
-            $newCount += $a[0]; $unsavedCount += $a[1];
-        // //lic_pt
+            $newCount += $a[0]; $unsavedCount += $a[1]; $RelNewCount += $a[2];
+        // lic_pt
         $a = self::importFromLicTable('LicPt');
-            $newCount += $a[0]; $unsavedCount += $a[1];
+            $newCount += $a[0]; $unsavedCount += $a[1]; $RelNewCount += $a[2];
+        
+        // TODO
+        $plc = self::setPrevLics();
 
+        foreach(self::$unfLics as $id => $l) dump($id . ' -> ' . $l);
+
+        if(self::$showInf) dump("Added prevLics : " . $plc . " anset PL: " . count(self::$unfLics));
         dump("License total: Added " . $newCount . ', unsaved ' . $unsavedCount);
+        dump("  RelLicensePi added: " . $RelNewCount . ' total: ' . RelLicensePi::count());
     }
-
+    /** 
+     * Импорт записей из 5 таблиц ebd_gis.lic*
+     * 
+     * @param string $licTableName название модели таблицы импорта
+     * 
+     * */
     private static function importFromLicTable(string $licTableName) : array
     {
-        $newCount = $unsavedCount = 0;
+        $newCount = $unsavedCount = $RelNewCount = 0;
         
-        $licTableModel = new (trim('App\Models\ebd_gis\ ') . $licTableName )();
-
+        $licTableModel = new ('App\Models\ebd_gis\\' . $licTableName )();
+        
         try
         {
-        foreach($licTableModel::all() as $l) {
-            $pis = $l->Пол_ископ == null ? [null] : self::splitPi($l->Пол_ископ);
+            foreach($licTableModel::all() as $l) {
+                
+                $prevLic = self::getPrevLicId($l->Старая_лиц);
 
-            foreach($pis as $pi) {
-                $newLic = License::create([
-                    //TODO ??
-                    //'vid' => ? 
+                $newLic = License::make([
                     'name' => $l->Название,
                     'series' => $l->Серия,
                     'number' => $l->Номер_лиц,
                     'license_type_id' => self::getLicTypeId($l->Тип),
-                    //'status' => '',
-                    'pi_id' => self::getPiId($pi),
+                    'status' => null, // нет данных для заполнения
                     'purpose_id' =>  self::getPurposeId($l->Цель),
                     'reason_id' =>  self::getReasId($l->Осн_выдачи),
                     'rdate' => $l->Дата_регис,
@@ -72,55 +90,119 @@ class LicenseImportController extends Controller
                     'suser_adr' => $l->Адрес,
                     'founder' => $l->Учредители,
                     'pcomp' => $l->Гол_предпр,
-                    //TODO Повторно пройти и проставить появившиеся лицензии
-                    'prev_license_id' => self::getPrevLicId($l->Старая_лиц),
-                    //TODO ??
-                    'ssub_rf_code' => DicSsubRf::where('value', $l->Назв_СФ)->first()->id,
-                    //TODO ??
-                    'ssub_rf_id' => DicSsubRf::where('value', $l->Назв_СФ)->first()->id,
-                    'arctic_zone_id' => DicArcticZone::where('value', $l->Аркт_зона)->first()->id,
+                    'prev_license_id' => $prevLic ? ($prevLic[0] ? $prevLic[1] : null) : null,
+                    'ssub_rf_code' => DicSsubRf::where('value', $l->Назв_СФ)?->first()->id,
+                    'ssub_rf_id' => DicSsubRf::where('value', $l->Назв_СФ)?->first()->id,
+                    'arctic_zone_id' => DicArcticZone::where('value', $l->Аркт_зона)?->first()->id,
                     's_license' => $l->s_лиц,
                     'comment' => $l->Примечание,
                     'geom' => $l->geom
                 ]);
-           
+
+                $md5 = md5($newLic->name . $newLic->series . $newLic->number 
+                        . $newLic->license_type_id //. $newLic->pi_id
+                        . $newLic->purpose_id  
+                        . $newLic->reason_id . date('d-m-Y', strtotime($newLic->rdate) ) . date('d-m-Y', strtotime($newLic->validity) )
+                        . $newLic->suser . $newLic->suser_inn . $newLic->suser_adr
+                        . $newLic->founder . $newLic->pcomp . $newLic->prev_license_id
+                        . $newLic->ssub_rf_code . $newLic->ssub_rf_id . $newLic->arctic_zone_id
+                        . sprintf("%.3f", $newLic->s_license) . $newLic->comment . $newLic->geom
+                        );
+
+                //dump($newLic->src_hash . ' <-----> ' . $md5 . ' <-----> ' . ($newLic->src_hash == $md5 ? 'T' : 'F'));
+
+                if(!License::where('src_hash', $md5)->exists())
+                {
+                    $newLic->save();
+                    $newCount++;
+                }
+                else
+                {
+                    $unsavedCount++;
+                }
+
                 $newLic->refresh();
 
-                // $m = md5($newLic->name . $newLic->series . $newLic->number 
-                //                         . $newLic->license_type_id . $newLic->pi_id . $newLic->purpose_id  
-                //                         . $newLic->reason_id . date('d-m-Y', strtotime($newLic->rdate) ) . date('d-m-Y', strtotime($newLic->validity) )
-                //                         . $newLic->suser ?? '' . $newLic->suser_inn ?? '' . $newLic->suser_adr ?? '' .
-                //                         $newLic->founder ?? '' . $newLic->pcomp ?? '' . $newLic->reason_id ?? '' . $newLic->prev_license_id ?? '' .
-                //                         $newLic->ssub_rf_code ?? '' . $newLic->ssub_rf_id ?? '' . $newLic->arctic_zone_id ?? '' .
-                //                         $newLic->s_license ?? '' . $newLic->comment ?? '' . $newLic->geom ?? ''
-                //                     );
+                foreach(self::splitPi($l->Пол_ископ) as $pi)
+                {
+                    if($newLic->id)
+                    {
+                        $newRel = RelLicensePi::firstOrCreate([
+                            'license_id' => $newLic->id,
+                            'pi_id' => DicPi::where('value', $pi)->first()?->id
+                        ]);
 
-                if( count(License::where('src_hash', $newLic->src_hash)->get()) > 1) {
-                    $newLic->delete();
-                    $unsavedCount++;
-                } else {
-                    $newCount++;
+                        if($newRel->wasRecentlyCreated) $RelNewCount++;
+                    }
+                }
+
+                if($prevLic != null && !$prevLic[0])
+                {
+                    self::$unfLics = [License::where('src_hash', $md5)->first()?->id => $prevLic[1]];
                 }
             }
         }
-        }
-        catch(Exception $e){dd($newLic);}
+        catch(Exception $e){ dd($e); }
 
-        dump("  License frm " . $licTableName . ": Added " . $newCount . ', unsaved ' . $unsavedCount);
-
-        return [$newCount, $unsavedCount];
+        if(self::$showInf) dump("  License frm " . $licTableName .' ('.$licTableModel::count().') '.  ": Added " . $newCount . ', unsaved ' . $unsavedCount);
+        
+        return [$newCount, $unsavedCount, $RelNewCount];
     }
+    private static function setPrevLics() : int
+    {
+        $counter = 0;
 
+        foreach(self::$unfLics as $id => $pl)
+        {
+      
+            $l = License::find($id);
+            
+            if($l)
+            {
+                $spltPL = self::splitPrevLic($pl);
+
+                $pl = License::where('series', $spltPL[1])
+                                ->where('number', $spltPL[2])
+                                ->where('license_type_id', self::getLicTypeId($spltPL[3]))
+                                ->first();
+
+                if($pl)
+                {
+                    $l->prev_license_id = $pl?->id;
+                    $l->save();
+                    $counter++;
+                    unset(self::$unfLics[$id]);
+                }
+                else
+                {
+                    $l->prev_license_id = null;
+                    $l->save();
+                    unset(self::$unfLics[$id]);
+                }
+            }
+        }
+
+        return $counter;
+    }
     private static function splitPi($str) : array {
         $pis = str_ireplace([', ', ',   ', ',  ', ', '], ',', $str);
         return explode(',', $pis);
+    }
+    private static function splitPrevLic(?string $str) : ?array {
+        if($str)
+        {
+            $spltPrevLic=[];
+            preg_match('/(^[А-Я]*) ?(\d*) ? ?([А-Я]+$)/u', $str, $spltPrevLic, 0);
+            return $spltPrevLic;
+        }
+        return null;
     }
     private static function getLicTypeId(?string $licType) : ?string {
         if($licType) {
            $type = DicLicenseType::where('value', $licType)->first();
            if($type) return $type->id;
            else {
-                dump('Тип лицензии задан, но не найден: ' . $licType);
+                if(self::$showInf) dump('Тип лицензии задан, но не найден: ' . $licType);
                 return null;
            }
         } 
@@ -147,10 +229,9 @@ class LicenseImportController extends Controller
         } 
         return null;
     }
-    private static function getPrevLicId(?string $licPrevLic) : ?string {
+    private static function getPrevLicId(?string $licPrevLic) : ?array {
         if($licPrevLic) {
-            $spltPrevLic=[];
-            preg_match('/(^[А-Я]*) ?(\d*) ? ?([А-Я]+$)/u', $licPrevLic, $spltPrevLic, 0);
+            $spltPrevLic = self::splitPrevLic($licPrevLic);
 
             if(count($spltPrevLic) == 4) {
                 $pl = License::where('series', $spltPrevLic[1])
@@ -158,15 +239,15 @@ class LicenseImportController extends Controller
                                 ->where('license_type_id', self::getLicTypeId($spltPrevLic[3]))
                                 ->first();
 
-                if($pl) return $pl->id;
+                if($pl) return [true, $pl->id];
                 else {
                     //dump('Прев. лиц задана, но не найдена: ' . $licPrevLic . ' -> ' . $spltPrevLic[1] .'-'. $spltPrevLic[2].'-'. $spltPrevLic[3]);
-                    //self::$unfLics[] = $licPrevLic;
-                    return null;
+                    self::$unfLics[] = $licPrevLic;
+                    return [false, $licPrevLic];
                 }
             }
             else {
-                dump('Прев. лиц задана неверно -> вернется нулл.  Полученная строка: ' . $licPrevLic);
+                if(self::$showInf) dump('Прев. лиц задана неверно -> вернется нулл.  Полученная строка: ' . $licPrevLic);
                 return null;
             }       
         }
