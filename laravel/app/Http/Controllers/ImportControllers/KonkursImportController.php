@@ -10,6 +10,7 @@ use App\Models\ebd_ekbd\dictionaries\DicPurpose;
 use App\Models\ebd_ekbd\Konkurs;
 use App\Models\ebd_ekbd\dictionaries\DicArcticZone;
 use App\Models\ebd_ekbd\dictionaries\DicSsubRf;
+<<<<<<< Updated upstream
 use App\Models\ebd_ekbd\konkurs_res\KonkursReservesN;
 use App\Models\ebd_ekbd\konkurs_res\KonkursReservesG;
 use App\Models\ebd_ekbd\konkurs_res\KonkursReservesK;
@@ -18,6 +19,9 @@ use App\Models\ebd_ekbd\konkurs_res\KonkursResourceG;
 use App\Models\ebd_ekbd\konkurs_res\KonkursResourceK;
 use App\Models\ebd_ekbd\rel\RelKonkursPi;
 use Ds\Set;
+=======
+
+>>>>>>> Stashed changes
 use Exception;
 
 class KonkursImportController extends Controller

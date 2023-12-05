@@ -1,0 +1,85 @@
+-- Участки -> Ресурсы и запасы
+
+-- Участки, предлагаемые к лицензированию -> Запасы_н_м (konkurs_reserves_n)
+--DROP IF EXISTS ebd_ekbd.konkurs_reserves_n
+CREATE TABLE IF NOT EXISTS ebd_ekbd.konkurs_reserves_n (
+	id uuid UNIQUE NOT NULL DEFAULT uuid_generate_v4() PRIMARY KEY,
+	konkurs_id uuid REFERENCES ebd_ekbd.konkurs(id),
+  	res varchar,
+	cdate timestamp DEFAULT now()
+);
+ALTER TABLE IF EXISTS ebd_ekbd.konkurs_reserves_n OWNER to ebd;
+REVOKE ALL ON TABLE ebd_ekbd.konkurs_reserves_n FROM ebd_integro;
+GRANT ALL ON TABLE ebd_ekbd.konkurs_reserves_n TO ebd;
+GRANT SELECT ON TABLE ebd_ekbd.konkurs_reserves_n TO ebd_integro;
+COMMENT ON TABLE ebd_ekbd.konkurs_reserves_n IS 'Участки, предлагаемые к лицензированию -> Запасы_н_м';
+
+-- Участки, предлагаемые к лицензированию -> Запасы_газ (konkurs_reserves_g)
+--DROP IF EXISTS ebd_ekbd.konkurs_reserves_g
+CREATE TABLE IF NOT EXISTS ebd_ekbd.konkurs_reserves_g (
+	id uuid UNIQUE NOT NULL DEFAULT uuid_generate_v4() PRIMARY KEY,
+	konkurs_id uuid REFERENCES ebd_ekbd.konkurs(id),
+  	res varchar,
+	cdate timestamp DEFAULT now()
+);
+ALTER TABLE IF EXISTS ebd_ekbd.konkurs_reserves_g OWNER to ebd;
+REVOKE ALL ON TABLE ebd_ekbd.konkurs_reserves_g FROM ebd_integro;
+GRANT ALL ON TABLE ebd_ekbd.konkurs_reserves_g TO ebd;
+GRANT SELECT ON TABLE ebd_ekbd.konkurs_reserves_g TO ebd_integro;
+COMMENT ON TABLE ebd_ekbd.konkurs_reserves_g IS 'Участки, предлагаемые к лицензированию -> Запасы_газ'
+
+-- Участки, предлагаемые к лицензированию -> Запасы_к (konkurs_reserves_k)
+--DROP IF EXISTS ebd_ekbd.konkurs_reserves_k
+CREATE TABLE IF NOT EXISTS ebd_ekbd.konkurs_reserves_k (
+	id uuid UNIQUE NOT NULL DEFAULT uuid_generate_v4() PRIMARY KEY,
+	konkurs_id uuid REFERENCES ebd_ekbd.konkurs(id),
+  	res varchar,
+	cdate timestamp DEFAULT now()
+);
+ALTER TABLE IF EXISTS ebd_ekbd.konkurs_reserves_k OWNER to ebd;
+REVOKE ALL ON TABLE ebd_ekbd.konkurs_reserves_k FROM ebd_integro;
+GRANT ALL ON TABLE ebd_ekbd.konkurs_reserves_k TO ebd;
+GRANT SELECT ON TABLE ebd_ekbd.konkurs_reserves_k TO ebd_integro;
+COMMENT ON TABLE ebd_ekbd.konkurs_reserves_k IS 'Участки, предлагаемые к лицензированию -> Запасы_к'
+
+-- Участки, предлагаемые к лицензированию -> Ресурсы_н (konkurs_resource_n)
+--DROP IF EXISTS ebd_ekbd.konkurs_resource_n
+CREATE TABLE IF NOT EXISTS ebd_ekbd.konkurs_resource_n (
+	id uuid UNIQUE NOT NULL DEFAULT uuid_generate_v4() PRIMARY KEY,
+	konkurs_id uuid REFERENCES ebd_ekbd.konkurs(id),
+  	res varchar,
+	cdate timestamp DEFAULT now()
+);
+ALTER TABLE IF EXISTS ebd_ekbd.konkurs_resource_n OWNER to ebd;
+REVOKE ALL ON TABLE ebd_ekbd.konkurs_resource_n FROM ebd_integro;
+GRANT ALL ON TABLE ebd_ekbd.konkurs_resource_n TO ebd;
+GRANT SELECT ON TABLE ebd_ekbd.konkurs_resource_n TO ebd_integro;
+COMMENT ON TABLE ebd_ekbd.konkurs_resource_n IS 'Участки, предлагаемые к лицензированию -> Ресурсы_н'
+
+-- Участки, предлагаемые к лицензированию -> Ресурсы_г (konkurs_resource_g)
+--DROP IF EXISTS ebd_ekbd.konkurs_resource_g
+CREATE TABLE IF NOT EXISTS ebd_ekbd.konkurs_resource_g (
+	id uuid UNIQUE NOT NULL DEFAULT uuid_generate_v4() PRIMARY KEY,
+	konkurs_id uuid REFERENCES ebd_ekbd.konkurs(id),
+  	res varchar,
+	cdate timestamp DEFAULT now()
+);
+ALTER TABLE IF EXISTS ebd_ekbd.konkurs_resource_g OWNER to ebd;
+REVOKE ALL ON TABLE ebd_ekbd.konkurs_resource_g FROM ebd_integro;
+GRANT ALL ON TABLE ebd_ekbd.konkurs_resource_g TO ebd;
+GRANT SELECT ON TABLE ebd_ekbd.konkurs_resource_g TO ebd_integro;
+COMMENT ON TABLE ebd_ekbd.konkurs_resource_g IS 'Участки, предлагаемые к лицензированию -> Ресурсы_г'
+
+-- Участки, предлагаемые к лицензированию -> Ресурсы_к (konkurs_resource_k)
+--DROP IF EXISTS ebd_ekbd.konkurs_resource_k
+CREATE TABLE IF NOT EXISTS ebd_ekbd.konkurs_resource_k (
+	id uuid UNIQUE NOT NULL DEFAULT uuid_generate_v4() PRIMARY KEY,
+	konkurs_id uuid REFERENCES ebd_ekbd.konkurs(id),
+  	res varchar,
+	cdate timestamp DEFAULT now()
+);
+ALTER TABLE IF EXISTS ebd_ekbd.konkurs_resource_k OWNER to ebd;
+REVOKE ALL ON TABLE ebd_ekbd.konkurs_resource_k FROM ebd_integro;
+GRANT ALL ON TABLE ebd_ekbd.konkurs_resource_k TO ebd;
+GRANT SELECT ON TABLE ebd_ekbd.konkurs_resource_k TO ebd_integro;
+COMMENT ON TABLE ebd_ekbd.konkurs_resource_k IS 'Участки, предлагаемые к лицензированию -> Ресурсы_к'
