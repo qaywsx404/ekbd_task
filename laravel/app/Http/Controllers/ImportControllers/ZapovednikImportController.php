@@ -3,23 +3,28 @@
 namespace App\Http\Controllers\importcontrollers;
 
 use App\Http\Controllers\Controller;
-use App\Models\ebd_ekbd\dictionaries\DicCompForm;
-use App\Models\ebd_ekbd\dictionaries\DicLicenseType;
-use App\Models\ebd_ekbd\dictionaries\DicPurpose;
 use App\Models\ebd_ekbd\dictionaries\DicZapovednikCategory;
 use App\Models\ebd_ekbd\dictionaries\DicZapovednikImportance;
 use App\Models\ebd_ekbd\dictionaries\DicZapovednikProfile;
 use App\Models\ebd_ekbd\dictionaries\DicZapovednikState;
-use App\Models\ebd_ekbd\Konkurs;
-use App\Models\ebd_ekbd\dictionaries\DicArcticZone;
 use App\Models\ebd_ekbd\dictionaries\DicSsubRf;
 use App\Models\ebd_ekbd\Zapovednik;
 use Exception;
 
 class ZapovednikImportController extends Controller
 {
-    public static function import()
+    /** Доп. инф. */
+    private static $showInf = false;
+
+    /**
+     * Начать импорт
+     * 
+     * @param bool $showInf  `true`  - показывать доп. инф.
+     *                       `false` - не показывать доп. инф.
+     */
+    public static function import(bool $showInf = false)
     {
+        self::$showInf = $showInf;
         $newCount = $unsavedCount = 0;
 
         //zapovedniki_ln
@@ -46,49 +51,75 @@ class ZapovednikImportController extends Controller
             {
                 try
                 {
-                    $newZap = Zapovednik::create([
-                        //TODO
-                        //'vid' => ?
+                    $newZap = Zapovednik::make([
                         'name' => $z->Название,
                         'zapovednik_category_id' => $z->категория_ ? DicZapovednikCategory::where('value',  $z->категория_)->first()?->id : null,
                         'zapovednik_importance_id' => $z->значение_о ? DicZapovednikImportance::where('value',  $z->значение_о)->first()?->id : null,
                         'zapovednik_profile_id' => $z->Профиль ? DicZapovednikProfile::where('value',  $z->Профиль)->first()?->id : null,
                         'zapovednik_state_id' => $z->Текущий_ст ? DicZapovednikState::where('value',  $z->Текущий_ст)->first()?->id : null,
-                        //TODO
                         'ssub_rf_id' => $z->Регион ? DicSsubRf::where('value',  $z->Регион)->first()?->id : null,
-                        //TODO
-                        //'s_zapovednik' => $z->Площадь_км ? str_ireplace([' ', ',', '..'], '.', $z->Площадь_км) : null,
-                        //TODO
-                        //'ohr_zona' => $z->Охранная_з,
-                        //TODO
-                        //'rdate' => $z->Дата_созда,
+                        's_zapovednik' => self::getS($z->Площадь_км),
+                        'ohr_zona' => self::getS($z->Охранная_з),
+                        'rdate' => self::getRDate($z->Дата_созда),
                         'comment' => $z->Примечание,
-                        //TODO
-                        //'geom' => $z->geom
+                        'geom' => $z->geom
                     ]);
-            
-                    $newZap->refresh();
-
-                    if( count(Zapovednik::where('src_hash', $newZap->src_hash)->get()) > 1)
+                    
+                    $newZap->src_hash = md5($z->number . $zapTableName);
+                
+                    if(!Zapovednik::where('src_hash', $newZap->src_hash)->exists())
                     {
-                        $newZap->delete();
-                        $unsavedCount++;
+                        $newZap->save();
+                        $newCount++;
                     }
                     else
                     {
-                        $newCount++;
+                        $unsavedCount++;
                     }
                 }
                 catch(Exception $e)
                 {
-                    dd($e->getMessage());
-                    //dd($z);
-                    //continue;
+                    dd($e);
                 }
             }
-        
-        dump("  Zapovedniki frm " . $zapTableName . ": Added " . $newCount . ', unsaved ' . $unsavedCount);
+
+        if(self::$showInf) dump("   Zapovednik frm " . $zapTableName .' ('.$zapTableModel::count().') '.   ": Added " . $newCount . ', unsaved ' . $unsavedCount);
 
         return [$newCount, $unsavedCount];
+    }
+    private static function getS(?string $strS) : ?float
+    {
+        if($strS != null && $strS != "")
+        {
+            $strS = str_ireplace([' ', ',', '..'], '.', $strS);
+            if(str_contains($strS, '+'))
+            {
+                if(self::$showInf) dump("       Неверное знаечние S строка: " . $strS . ' ->null');
+                return null;
+            }
+
+            return floatval($strS);
+        }
+
+        return null;
+    }
+    private static function getRDate(?string $str) : ?string
+    {
+        if($str != null && $str != "")
+        {
+            //TODO
+            if($str == '19.041983') $str = '19.04.1983';
+            if($str == '07.16.1988') $str = '16.07.2988';
+            if($str == '21.08.1991.') $str = '21.08.1991';
+            if($str == '30.08.2017г.') $str = '30.08.2017';
+            if(strlen($str) == 4) $str = '01.01.'.$str;
+
+            if(strlen($str) == 10)
+                return $str;
+
+            if(self::$showInf) dump("       Дата неверного формата : " . $str . " ->null");
+        }
+        
+        return null;
     }
 }

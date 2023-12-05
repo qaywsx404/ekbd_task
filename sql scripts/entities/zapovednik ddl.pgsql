@@ -22,18 +22,10 @@ CREATE TABLE IF NOT EXISTS ebd_ekbd.zapovednik (
     rdate date,
 
 	comment character varying DEFAULT NULL,
-	src_hash character varying GENERATED ALWAYS AS (md5(
-                                                    (
-                                                    COALESCE(name, '') || COALESCE(zapovednik_category_id::text, '') || COALESCE(zapovednik_importance_id::text, '')
-                                                    || COALESCE(zapovednik_profile_id::text, '') || COALESCE(zapovednik_state_id::text, '') || COALESCE(ssub_rf_id::text, '')
-                                                    || COALESCE(S_zapovednik::text, '') || COALESCE(ohr_zona::text, '') || COALESCE(ebd_ekbd.f_date_to_char(rdate), '')
-                                                    || COALESCE(comment, '') || COALESCE(geom::text, '')
-                                                    )
-									                ))
-                                                     STORED NOT NULL,
+	src_hash character varying NOT NULL,
 	cdate timestamp DEFAULT now(), 		
     mdate timestamp DEFAULT now(),
-	geom geometry(MultiPolygon,7683),
+	geom geometry(Geometry,7683),
 
 	CONSTRAINT zapovednik_pkey PRIMARY KEY (id),
     CONSTRAINT zapovednik_vid_fkey FOREIGN KEY (vid) REFERENCES ebd_ekbd.zapovednik,
