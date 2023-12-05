@@ -18,8 +18,18 @@ use Exception;
 
 class DepositImportController extends Controller
 {
-    public static function import()
+    /** Доп. инф. */
+    private static $showInf = false;
+    
+    /**
+     * Начать импорт
+     * 
+     * @param bool $showInf  `true`  - показывать доп. инф.
+     *                       `false` - не показывать доп. инф.
+     */
+    public static function import(bool $showInf = false)
     {
+        self::$showInf = $showInf;
         $newCount = $unsavedCount = 0;
 
         [$newCount, $unsavedCount] = self::importFromTable();
@@ -36,16 +46,12 @@ class DepositImportController extends Controller
             {
                 try
                 {
-                    $newDeposit = Deposit::create([
-                        //TODO
-                        //'vid' => ?
+                    $newDeposit = Deposit::make([
                         'name' => $d->СПИСОК_МЕС,
                         'deposit_type_id' => $d->Тип ? DicDepositType::where('value', $d->Тип)->first()?->id : null,
                         'deposit_stage_id' => $d->Стадия ? DicDepositStage::where('value', $d->Стадия)->first()?->id : null,
                         'dyear' => $d->Год_откр,
-                        //TODO
                         'oblast_ssub_rf_id' => $d->Область ? DicSsubRf::where('value', $d->Область)->first()?->id : null,
-                        //TODO
                         'okrug_ssub_rf_id' => $d->Округ ? DicSsubRf::where('value', $d->Округ)->first()?->id : null,
                         'ngp_id' => $d->ngp ? Ngp::where('name', $d->ngp)->first()?->id : null,
                         'ngo_id' => $d->ngo ? Ngo::where('name', $d->ngo)->first()?->id : null,
@@ -59,17 +65,17 @@ class DepositImportController extends Controller
                         'note' => $d->Примечание,
                         'geom' => $d->geom
                     ]);
-            
-                    $newDeposit->refresh();
 
-                    if( count(Deposit::where('src_hash', $newDeposit->src_hash)->get()) > 1)
+                    $newDeposit->src_hash = md5($d->gid);
+
+                    if(!Deposit::where('src_hash', $newDeposit->src_hash)->exists())
                     {
-                        $newDeposit->delete();
-                        $unsavedCount++;
+                        $newDeposit->save();
+                        $newCount++;
                     }
                     else
                     {
-                        $newCount++;
+                        $unsavedCount++;
                     }
                 }
                 catch(Exception $e)
@@ -79,6 +85,8 @@ class DepositImportController extends Controller
                     continue;
                 }
             }
+
+        if(self::$showInf) dump("   Deposit frm ng_mest" .' ('.NgMest::count().') '.  ": Added " . $newCount . ', unsaved ' . $unsavedCount);
 
         return [$newCount, $unsavedCount];
     }

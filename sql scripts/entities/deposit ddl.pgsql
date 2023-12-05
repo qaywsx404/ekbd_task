@@ -28,17 +28,7 @@ CREATE TABLE IF NOT EXISTS ebd_ekbd.deposit (
 
 	comment character varying DEFAULT NULL,
 	note character varying DEFAULT NULL,
-	src_hash character varying GENERATED ALWAYS AS (md5(
-                                                    (
-                                                    COALESCE(name, '') || COALESCE(deposit_type_id::text, '') || COALESCE(deposit_stage_id::text, '')
-                                                    || COALESCE(dyear::text, '') || COALESCE(oblast_ssub_rf_id::text, '') || COALESCE(okrug_ssub_rf_id::text, '')
-                                                    || COALESCE(ngp_id::text, '') || COALESCE(ngo_id::text, '') || COALESCE(ngr_id::text, '')
-                                                    || COALESCE(arctic_zone_id::text, '') || COALESCE(deposit_n_size_id::text, '') || COALESCE(deposit_k_size_id::text, '')
-                                                    || COALESCE(deposit_g_size_id::text, '') || COALESCE(deposit_k_substance_id::text, '') || COALESCE(comment, '')
-                                                    || COALESCE(note, '') || COALESCE(geom::text, '')
-                                                    )::text
-									                ))
-                                                    STORED NOT NULL,
+	src_hash character varying NOT NULL,
 	cdate timestamp DEFAULT now(), 		
     mdate timestamp DEFAULT now(),
 	geom geometry(MultiPolygon,7683),
