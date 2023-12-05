@@ -17,13 +17,7 @@ CREATE TABLE IF NOT EXISTS ebd_ekbd.ngo (
     index_all character varying,
     				
 	comment character varying DEFAULT NULL,
-	src_hash character varying GENERATED ALWAYS AS (md5(
-                                                    (
-                                                    COALESCE(name, '') || COALESCE(ngo_type_id::text, '') || COALESCE(ngp_id::text, '')
-                                                    || COALESCE(index_all, '') || COALESCE(geom::text, '')
-                                                    )::text
-									                ))
-                                                    STORED NOT NULL,
+	src_hash character varying NULL,
 	cdate timestamp DEFAULT now(), 				
     mdate timestamp DEFAULT now(),
 	geom geometry(MultiPolygon, 987654),

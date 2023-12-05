@@ -10,26 +10,36 @@ use App\Models\ebd_gis\Ngo2019;
 
 class NgoImportController extends Controller
 {
-    public static function import()
+    /** Доп. инф. */
+    private static $showInf = false;
+
+    /**
+     * Начать импорт
+     * 
+     * @param bool $showInf  `true`  - показывать доп. инф.
+     *                       `false` - не показывать доп. инф.
+     */
+    public static function import(bool $showInf = false)
     {
-        $newCount = $unsavedCount = 0;
+        self::$showInf = $showInf;
+        $newCount = 0;
 
-        [$newCount, $unsavedCount] = self::importFromTable();
+        Ngo::truncate();
+        if(self::$showInf) dump("   Ngo tr");
 
-        dump("Ngo total: Added " . $newCount . ', unsaved ' . $unsavedCount);
+        $newCount = self::importFromTable();
+
+        dump("Ngo total: Added " . $newCount . ' of ' . Ngo2019::count());
     }
 
     /**  Импорт записей из таблицы  ebd_gis.ngo_2019 */
-    private static function importFromTable() : array
+    private static function importFromTable() : int
     {
-        $newCount = $unsavedCount = 0;
+        $newCount = 0;
 
             foreach(Ngo2019::all() as $n)
             {
-
-                $newNgo = Ngo::create([
-                    //TODO
-                    //'vid'
+                Ngo::create([
                     'name' => $n->region,
                     'ngo_type_id' => $n->type_ngo ? DicNgoType::where('value', $n->type_ngo)->first()->id : null,
                     'ngp_id' => $n->province ? Ngp::where('name', $n->province)->first()->id : null,
@@ -37,20 +47,10 @@ class NgoImportController extends Controller
                     'comment' => null,
                     'geom' => $n->geom
                 ]);
-        
-                $newNgo->refresh();
 
-                if( count(Ngo::where('src_hash', $newNgo->src_hash)->get()) > 1)
-                {
-                    $newNgo->delete();
-                    $unsavedCount++;
-                }
-                else
-                {
-                    $newCount++;
-                }
+                $newCount++;
             }
 
-        return [$newCount, $unsavedCount];
+        return $newCount;
     }
 }
