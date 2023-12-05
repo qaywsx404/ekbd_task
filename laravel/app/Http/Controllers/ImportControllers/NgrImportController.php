@@ -11,26 +11,36 @@ use App\Models\ebd_gis\Ngr2019;
 
 class NgrImportController extends Controller
 {
-    public static function import()
+    /** Доп. инф. */
+    private static $showInf = false;
+
+    /**
+     * Начать импорт
+     * 
+     * @param bool $showInf  `true`  - показывать доп. инф.
+     *                       `false` - не показывать доп. инф.
+     */
+    public static function import(bool $showInf = false)
     {
-        $newCount = $unsavedCount = 0;
+        self::$showInf = $showInf;
+        $newCount = 0;
 
-        [$newCount, $unsavedCount] = self::importFromTable();
+        Ngr::truncate();
+        if(self::$showInf) dump("   Ngr tr");
 
-        dump("Ngr total: Added " . $newCount . ', unsaved ' . $unsavedCount);
+        $newCount = self::importFromTable();
+
+        dump("Ngr total: Added " . $newCount . ' of ' . Ngr2019::count());
     }
 
     /**  Импорт записей из таблицы  ebd_gis.ngr_2019 */
-    private static function importFromTable() : array
+    private static function importFromTable() : int
     {
-        $newCount = $unsavedCount = 0;
+        $newCount = 0;
 
             foreach(Ngr2019::all() as $n)
             {
-
                 $newNgr = Ngr::create([
-                    //TODO
-                    //'vid'
                     'name' => $n->district,
                     'ngr_type_id' => $n->type_ngr ? DicNgrType::where('value', $n->type_ngr)->first()->id : null,
                     'ngp_id' => $n->province ? Ngp::where('name', $n->province)->first()->id : null,
@@ -40,19 +50,9 @@ class NgrImportController extends Controller
                     'geom' => $n->geom
                 ]);
         
-                $newNgr->refresh();
-
-                if( count(Ngr::where('src_hash', $newNgr->src_hash)->get()) > 1)
-                {
-                    $newNgr->delete();
-                    $unsavedCount++;
-                }
-                else
-                {
-                    $newCount++;
-                }
+               $newCount++;
             }
 
-        return [$newCount, $unsavedCount];
+        return $newCount;
     }
 }
