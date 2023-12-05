@@ -205,55 +205,55 @@ class ImportCommand extends Command
 
             case 'license':
                 dump( 'Импорт license' );
-                LicenseImportController::import();
+                LicenseImportController::import(true);
                 dump( 'done' );
                 break;  
 
             case 'flang':
                 dump( 'Импорт flang' );
-                FlangImportController::import();
+                FlangImportController::import(true);
                 dump( 'done' );
                 break;
             
             case 'ngp':
                 dump( 'Импорт ngp' );
-                NgpImportController::import();
+                NgpImportController::import(true);
                 dump( 'done' );
                 break;
 
             case 'ngo':
                 dump( 'Импорт ngo' );
-                NgoImportController::import();
+                NgoImportController::import(true);
                 dump( 'done' );
                 break;
 
             case 'ngr':
                 dump( 'Импорт ngr' );
-                NgrImportController::import();
+                NgrImportController::import(true);
                 dump( 'done' );
                 break;  
 
             case 'deposit':
                 dump( 'Импорт deposit' );
-                DepositImportController::import();
+                DepositImportController::import(true);
                 dump( 'done' );
                 break;  
 
             case 'konkurs':
                 dump( 'Импорт konkurs' );
-                KonkursImportController::import();
+                KonkursImportController::import(true);
                 dump( 'done' );
                 break;
 
             case 'zapovednik':
                 dump( 'Импорт zapovednik' );
-                ZapovednikImportController::import();
+                ZapovednikImportController::import(true);
                 dump( 'done' );
                 break;  
 
             case 'struct':
                 dump( 'Импорт struct' );
-                StructImportController::import();
+                StructImportController::import(true);
                 dump( 'done' );
                 break;  
 
