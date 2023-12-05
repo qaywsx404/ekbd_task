@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS ebd_ekbd.konkurs
     ryear character varying,
     comp_form_id uuid,
     ssub_rf_id uuid,
-    S_konkurs numeric(12,3),
+    s_konkurs numeric(12,3),
     prev_konkurs_id uuid DEFAULT NULL,
     prev_txt character varying DEFAULT NULL,
     arctic_zone_id uuid DEFAULT NULL,
@@ -31,17 +31,7 @@ CREATE TABLE IF NOT EXISTS ebd_ekbd.konkurs
     resource_k character varying DEFAULT NULL,
 	
     comment character varying DEFAULT NULL,
-	src_hash character varying GENERATED ALWAYS AS (md5(
-                                                    (
-                                                    COALESCE(name, '') || COALESCE(license_type_id::text, '') || COALESCE(konkurs_pi_id::text, '')
-                                                    || COALESCE(purpose_id::text, '') || COALESCE(ryear, '') || COALESCE(comp_form_id::text, '')   
-                                                    || COALESCE(ssub_rf_id::text, '') || COALESCE(S_konkurs::text, '') || COALESCE(prev_konkurs_id::text, '') 
-                                                    || COALESCE(arctic_zone_id::text, '') || COALESCE(reserves_n, '') || COALESCE(resource_n, '') 
-                                                    || COALESCE(reserves_g, '') || COALESCE(resource_g, '') || COALESCE(reserves_k, '') 
-                                                    || COALESCE(resource_k, '') || COALESCE(comment, '') || COALESCE(geom::text, '') 
-                                                    )::text
-									                ))
-                                                    STORED NOT NULL,
+	src_hash character varying NOT NULL,
 	cdate timestamp DEFAULT now(),
     mdate timestamp DEFAULT now(),
 	geom geometry(MultiPolygon,7683),
