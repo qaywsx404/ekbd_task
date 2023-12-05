@@ -34,19 +34,7 @@ CREATE TABLE IF NOT EXISTS ebd_ekbd.struct (
     rdl_k numeric(12,3),
 
 	comment character varying DEFAULT NULL,
-	src_hash character varying GENERATED ALWAYS AS (md5(
-                                                    (
-                                                    COALESCE(name, '') || COALESCE(deposit_type_id::text, '') || COALESCE(deposit_stage_id::text, '')
-                                                    || COALESCE(ng_struct, '') || COALESCE(oblast_ssub_rf_id::text, '') || COALESCE(okrug_ssub_rf_id::text, '')
-                                                    || COALESCE(ngp_id::text, '') || COALESCE(ngo_id::text, '') || COALESCE(ngr_id::text, '')
-                                                    || COALESCE(arctic_zone_id::text, '') || COALESCE(syear::text, '') || COALESCE(lastyear::text, '')
-                                                    || COALESCE(nf, '') || COALESCE(gr_n::text, '') || COALESCE(gr_g::text, '')
-                                                    || COALESCE(gr_k::text, '') || COALESCE(ir_n::text, '') || COALESCE(ir_k::text, '')
-                                                    || COALESCE(rdl_n::text, '') || COALESCE(rdl_g::text, '') || COALESCE(rdl_k::text, '')
-                                                    || COALESCE(comment, '') || COALESCE(geom::text, '')
-                                                    )
-									                 ))
-                                                     STORED NOT NULL,
+	src_hash character varying NOT NULL,
 	cdate timestamp DEFAULT now(), 		
     mdate timestamp DEFAULT now(),
 	geom geometry(MultiPolygon,7683),

@@ -3,11 +3,8 @@
 namespace App\Http\Controllers\importcontrollers;
 
 use App\Http\Controllers\Controller;
-use App\Models\ebd_ekbd\dictionaries\DicCompForm;
 use App\Models\ebd_ekbd\dictionaries\DicDepositStage;
 use App\Models\ebd_ekbd\dictionaries\DicDepositType;
-use App\Models\ebd_ekbd\dictionaries\DicLicenseType;
-use App\Models\ebd_ekbd\dictionaries\DicPurpose;
 use App\Models\ebd_ekbd\Ngp;
 use App\Models\ebd_ekbd\Ngo;
 use App\Models\ebd_ekbd\Ngr;
@@ -19,8 +16,18 @@ use Exception;
 
 class StructImportController extends Controller
 {
-    public static function import()
+    /** Доп. инф. */
+    private static $showInf = false;
+
+    /**
+     * Начать импорт
+     * 
+     * @param bool $showInf  `true`  - показывать доп. инф.
+     *                       `false` - не показывать доп. инф.
+     */
+    public static function import(bool $showInf = false)
     {
+        self::$showInf = $showInf;
         $newCount = $unsavedCount = 0;
 
         [$newCount, $unsavedCount] = self::importFromTable();
@@ -37,16 +44,12 @@ class StructImportController extends Controller
             {
                 try
                 {
-                    $newStruct = Struct::create([
-                        //TODO
-                        //'vid' => ?
+                    $newStruct = Struct::make([
                         'name' => $s->СПИСОК_СТР,
                         'deposit_type_id' => $s->Тип ? DicDepositType::where('value', $s->Тип)->first()?->id : null,
                         'deposit_stage_id' => $s->Стадия ? DicDepositStage::where('value', $s->Стадия)->first()?->id : null,
                         'ng_struct' => $s->Отложения,
-                        //TODO
                         'oblast_ssub_rf_id' => $s->Область ? DicSsubRf::where('value', $s->Область)->first()?->id : null,
-                        //TODO
                         'okrug_ssub_rf_id' => $s->Округ ? DicSsubRf::where('value', $s->Округ)->first()?->id : null,
                         'ngp_id' => $s->ngp ? Ngp::where('name', $s->ngp)->first()?->id : null,
                         'ngo_id' => $s->ngo ? Ngo::where('name', $s->ngo)->first()?->id : null,
@@ -67,16 +70,16 @@ class StructImportController extends Controller
                         'geom' => $s->geom
                     ]);
             
-                    $newStruct->refresh();
-
-                    if( count(Struct::where('src_hash', $newStruct->src_hash)->get()) > 1)
+                    $newStruct->src_hash = md5($s->gid);
+                    
+                    if(!Struct::where('src_hash', $newStruct->src_hash)->exists())
                     {
-                        $newStruct->delete();
-                        $unsavedCount++;
+                        $newStruct->save();
+                        $newCount++;
                     }
                     else
                     {
-                        $newCount++;
+                        $unsavedCount++;
                     }
                 }
                 catch(Exception $e)
@@ -86,6 +89,9 @@ class StructImportController extends Controller
                     continue;
                 }
             }
+
+        if(self::$showInf) dump("   Struct frm ng_struct" .' ('.NgStruct::count().') '.  ": Added " . $newCount . ', unsaved ' . $unsavedCount);
+
         return [$newCount, $unsavedCount];
     }
 }
