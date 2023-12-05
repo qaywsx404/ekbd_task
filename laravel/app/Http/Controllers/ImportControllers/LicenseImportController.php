@@ -18,7 +18,7 @@ class LicenseImportController extends Controller
 {
     /** Лицензии с ненайдеными прев. лиц. */
     private static $unfLics = [];
-    /** Показывать ли доп. инф. */
+    /** Доп. инф. */
     private static $showInf = false;
     
     /**
@@ -48,14 +48,14 @@ class LicenseImportController extends Controller
         $a = self::importFromLicTable('LicPt');
             $newCount += $a[0]; $unsavedCount += $a[1]; $RelNewCount += $a[2];
         
-        // TODO
         $plc = self::setPrevLics();
 
-        foreach(self::$unfLics as $id => $l) dump($id . ' -> ' . $l);
-
-        if(self::$showInf) dump("Added prevLics : " . $plc . " anset PL: " . count(self::$unfLics));
+        if(self::$showInf)
+        {
+            dump("  Added prevLics : " . $plc . " anset PL: " . count(self::$unfLics));
+            dump("  RelLicensePi added: " . $RelNewCount . ' total: ' . RelLicensePi::count());
+        }
         dump("License total: Added " . $newCount . ', unsaved ' . $unsavedCount);
-        dump("  RelLicensePi added: " . $RelNewCount . ' total: ' . RelLicensePi::count());
     }
     /** 
      * Импорт записей из 5 таблиц ebd_gis.lic*
@@ -99,19 +99,20 @@ class LicenseImportController extends Controller
                     'geom' => $l->geom
                 ]);
 
-                $md5 = md5($newLic->name . $newLic->series . $newLic->number 
-                        . $newLic->license_type_id //. $newLic->pi_id
-                        . $newLic->purpose_id  
-                        . $newLic->reason_id . date('d-m-Y', strtotime($newLic->rdate) ) . date('d-m-Y', strtotime($newLic->validity) )
-                        . $newLic->suser . $newLic->suser_inn . $newLic->suser_adr
-                        . $newLic->founder . $newLic->pcomp . $newLic->prev_license_id
-                        . $newLic->ssub_rf_code . $newLic->ssub_rf_id . $newLic->arctic_zone_id
-                        . sprintf("%.3f", $newLic->s_license) . $newLic->comment . $newLic->geom
+                $newLic->src_hash = md5(//$newLic->name .
+                    $newLic->series . $newLic->number . $newLic->license_type_id
+                        // . $newLic->pi_id
+                        // . $newLic->purpose_id  
+                        // . $newLic->reason_id . date('d-m-Y', strtotime($newLic->rdate) ) . date('d-m-Y', strtotime($newLic->validity) )
+                        // . $newLic->suser . $newLic->suser_inn . $newLic->suser_adr
+                        // . $newLic->founder . $newLic->pcomp . $newLic->prev_license_id
+                        // . $newLic->ssub_rf_code . $newLic->ssub_rf_id . $newLic->arctic_zone_id
+                        // . sprintf("%.3f", $newLic->s_license) . $newLic->comment . $newLic->geom
                         );
 
                 //dump($newLic->src_hash . ' <-----> ' . $md5 . ' <-----> ' . ($newLic->src_hash == $md5 ? 'T' : 'F'));
 
-                if(!License::where('src_hash', $md5)->exists())
+                if(!License::where('src_hash', $newLic->src_hash)->exists())
                 {
                     $newLic->save();
                     $newCount++;
@@ -121,11 +122,9 @@ class LicenseImportController extends Controller
                     $unsavedCount++;
                 }
 
-                $newLic->refresh();
-
                 foreach(self::splitPi($l->Пол_ископ) as $pi)
                 {
-                    if($newLic->id)
+                    if(($newLic->id != null) && ($newLic->id != ""))
                     {
                         $newRel = RelLicensePi::firstOrCreate([
                             'license_id' => $newLic->id,
@@ -138,7 +137,7 @@ class LicenseImportController extends Controller
 
                 if($prevLic != null && !$prevLic[0])
                 {
-                    self::$unfLics = [License::where('src_hash', $md5)->first()?->id => $prevLic[1]];
+                    self::$unfLics = [License::where('src_hash')->first()?->id => $prevLic[1]];
                 }
             }
         }
@@ -154,30 +153,32 @@ class LicenseImportController extends Controller
 
         foreach(self::$unfLics as $id => $pl)
         {
-      
-            $l = License::find($id);
-            
-            if($l)
-            {
-                $spltPL = self::splitPrevLic($pl);
 
-                $pl = License::where('series', $spltPL[1])
-                                ->where('number', $spltPL[2])
-                                ->where('license_type_id', self::getLicTypeId($spltPL[3]))
-                                ->first();
+            if($id != "") {   
+                $l = License::find($id);
+                
+                if(License::find($id)->exists())
+                {
+                    $spltPL = self::splitPrevLic($pl);
 
-                if($pl)
-                {
-                    $l->prev_license_id = $pl?->id;
-                    $l->save();
-                    $counter++;
-                    unset(self::$unfLics[$id]);
-                }
-                else
-                {
-                    $l->prev_license_id = null;
-                    $l->save();
-                    unset(self::$unfLics[$id]);
+                    $pl = License::where('series', $spltPL[1])
+                                    ->where('number', $spltPL[2])
+                                    ->where('license_type_id', self::getLicTypeId($spltPL[3]))
+                                    ->first();
+
+                    if($pl)
+                    {
+                        $l->prev_license_id = $pl?->id;
+                        $l->save();
+                        $counter++;
+                        unset(self::$unfLics[$id]);
+                    }
+                    else
+                    {
+                        $l->prev_license_id = null;
+                        $l->save();
+                        //unset(self::$unfLics[$id]);
+                    }
                 }
             }
         }
@@ -202,7 +203,7 @@ class LicenseImportController extends Controller
            $type = DicLicenseType::where('value', $licType)->first();
            if($type) return $type->id;
            else {
-                if(self::$showInf) dump('Тип лицензии задан, но не найден: ' . $licType);
+                if(self::$showInf) dump('       Тип лицензии задан, но не найден: ' . $licType);
                 return null;
            }
         } 
@@ -218,14 +219,14 @@ class LicenseImportController extends Controller
     private static function getPurposeId(?string $licPurp) : ?string {
         if($licPurp) {
            $pp = DicPurpose::where('value', $licPurp)->first();
-           return $pp ? $pp->id : throw new ErrorException('Цель задана, но не найдена: ' . $licPurp);
+           return $pp ? $pp->id : throw new ErrorException('        Цель задана, но не найдена: ' . $licPurp);
         } 
         return null;
     }
     private static function getReasId(?string $licReas) : ?string {
         if($licReas) {
            $rr = DicReason::where('value', $licReas)->first();
-           return $rr ? $rr->id : throw new ErrorException('Осн. выдачи задана, но не найдена: ' . $licReas);
+           return $rr ? $rr->id : throw new ErrorException('        Осн. выдачи задана, но не найдена: ' . $licReas);
         } 
         return null;
     }
@@ -247,7 +248,7 @@ class LicenseImportController extends Controller
                 }
             }
             else {
-                if(self::$showInf) dump('Прев. лиц задана неверно -> вернется нулл.  Полученная строка: ' . $licPrevLic);
+                if(self::$showInf) dump('       Прев. лиц задана неверно -> вернется нулл.  Полученная строка: ' . $licPrevLic);
                 return null;
             }       
         }

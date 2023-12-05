@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS ebd_ekbd.license
     number character varying,
     license_type_id uuid, 
     status bool,
-    pi_id uuid,
+    --pi_id uuid, вынесено в отдельную таблицу
     purpose_id uuid,
     reason_id uuid ,
     rdate date,
@@ -34,30 +34,33 @@ CREATE TABLE IF NOT EXISTS ebd_ekbd.license
     s_license numeric(12,3),
     
     comment character varying DEFAULT NULL,
-    src_hash character varying GENERATED ALWAYS AS (md5(
-													(
-													COALESCE(name, '') || COALESCE(series, '') || COALESCE(number, '')
-													|| COALESCE(license_type_id::text, '') || COALESCE(pi_id::text, '') || COALESCE(purpose_id::text, '')
-													|| COALESCE(reason_id::text, '') || COALESCE(ebd_ekbd.f_date_to_char(rdate), '') || COALESCE(ebd_ekbd.f_date_to_char(validity), '')
-													|| COALESCE(suser, '') || COALESCE(suser_inn, '')|| COALESCE(suser_adr, '')
-													|| COALESCE(founder, '') || COALESCE(pcomp, '') || COALESCE(prev_license_id::text, '') 
-													|| COALESCE(ssub_rf_code, '') || COALESCE(ssub_rf_id::text, '') || COALESCE(arctic_zone_id::text, '') 
-                                                    || COALESCE(s_license::text, '') || COALESCE(comment, '') || COALESCE(geom::text, '') 
-													)::text
-													))
-                                                    STORED NOT NULL,
+    src_hash character varying NOT NULL,
+													--GENERATED ALWAYS AS (md5(
+													--(
+													--COALESCE(name, '') || COALESCE(series, '') || COALESCE(number, '')
+													--|| COALESCE(license_type_id::text, '')
+													----|| COALESCE(pi_id::text, '')
+													--|| COALESCE(purpose_id::text, '')
+													--|| COALESCE(reason_id::text, '') || COALESCE(ebd_ekbd.f_date_to_char(rdate), '') || COALESCE(ebd_ekbd.f_date_to_char(validity), '')
+													--|| COALESCE(suser, '') || COALESCE(suser_inn, '')|| COALESCE(suser_adr, '')
+													--|| COALESCE(founder, '') || COALESCE(pcomp, '') || COALESCE(prev_license_id::text, '') 
+													--|| COALESCE(ssub_rf_code, '') || COALESCE(ssub_rf_id::text, '') || COALESCE(arctic_zone_id::text, '') 
+                                                    --|| COALESCE(s_license::text, '') || COALESCE(comment, '') || COALESCE(geom::text, '')
+													--)::text
+													--))
+                                                    --STORED,
 	cdate timestamp DEFAULT now(), 						
     mdate timestamp DEFAULT now(),
 	geom geometry(Geometry,7683),
 	
     CONSTRAINT license_pkey PRIMARY KEY (id),
-	CONSTRAINT license_vid_fkey FOREIGN KEY (vid) REFERENCES ebd_ekbd.license,                                              -- ?
+	CONSTRAINT license_vid_fkey FOREIGN KEY (vid) REFERENCES ebd_ekbd.license,
 	CONSTRAINT license_dic_license_type_fkey FOREIGN KEY (license_type_id) REFERENCES ebd_ekbd.dic_license_type (id),
-	CONSTRAINT license_dic_pi_fkey FOREIGN KEY (pi_id) REFERENCES ebd_ekbd.dic_pi(id),
+	--CONSTRAINT license_dic_pi_fkey FOREIGN KEY (pi_id) REFERENCES ebd_ekbd.dic_pi(id),
 	CONSTRAINT license_dic_purpose_fkey FOREIGN KEY (purpose_id) REFERENCES ebd_ekbd.dic_purpose(id),
 	CONSTRAINT license_dic_reason_fkey FOREIGN KEY (reason_id) REFERENCES ebd_ekbd.dic_reason(id),
 	CONSTRAINT license_prev_license_fkey FOREIGN KEY (prev_license_id) REFERENCES ebd_ekbd.license(id),
-	CONSTRAINT license_dic_ssub_rf_fkey FOREIGN KEY (ssub_rf_id) REFERENCES ebd_ekbd.dic_ssub_rf(id), 						-- ?
+	CONSTRAINT license_dic_ssub_rf_fkey FOREIGN KEY (ssub_rf_id) REFERENCES ebd_ekbd.dic_ssub_rf(id),
 	CONSTRAINT license_dic_arctic_zone_fkey FOREIGN KEY (arctic_zone_id) REFERENCES ebd_ekbd.dic_arctic_zone(id)
 );
 
@@ -78,7 +81,7 @@ COMMENT ON COLUMN ebd_ekbd.license.series IS 'Серия';
 COMMENT ON COLUMN ebd_ekbd.license.number IS 'Номер';
 COMMENT ON COLUMN ebd_ekbd.license.license_type_id IS 'Тип';
 COMMENT ON COLUMN ebd_ekbd.license.status IS 'Статус';
-COMMENT ON COLUMN ebd_ekbd.license.pi_id IS 'Полезное ископаемое';
+--COMMENT ON COLUMN ebd_ekbd.license.pi_id IS 'Полезное ископаемое';
 COMMENT ON COLUMN ebd_ekbd.license.purpose_id IS 'Цель';
 COMMENT ON COLUMN ebd_ekbd.license.reason_id IS 'Основание выдачи';
 COMMENT ON COLUMN ebd_ekbd.license.rdate IS 'Дата регистрации';
