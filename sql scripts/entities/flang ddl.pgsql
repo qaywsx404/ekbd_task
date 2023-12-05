@@ -25,15 +25,7 @@ CREATE TABLE IF NOT EXISTS ebd_ekbd.flang
 	flang_status_id uuid,
 
 	comment character varying DEFAULT NULL,
-	src_hash character varying GENERATED ALWAYS AS (md5(
-										(
-                                        COALESCE(name, '') || COALESCE(deposit, '') || COALESCE(isFlang, '')
-                                        || COALESCE(s_flang::text, '') || COALESCE(declarant, '') || COALESCE(edate, '')
-                                        || COALESCE(resol, '') || COALESCE(ssub_rf_id::text, '') || COALESCE(license_id::text, '')
-                                        || COALESCE(flang_status_id::text, '') || COALESCE(comment, '') || COALESCE(geom::text, '')
-                                        )::text
-									  ))
-                                      STORED NOT NULL,
+	src_hash character varying NOT NULL,
 	cdate timestamp DEFAULT now(),
     mdate timestamp DEFAULT now(),
 	geom geometry(MultiPolygon,7683),

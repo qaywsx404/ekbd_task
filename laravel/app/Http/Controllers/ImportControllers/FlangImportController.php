@@ -13,8 +13,18 @@ use Exception;
 
 class FlangImportController extends Controller
 {
-    public static function import()
+     /** Доп. инф. */
+     private static $showInf = false;
+
+     /**
+     * Начать импорт
+     * 
+     * @param bool $showInf  `true`  - показывать доп. инф.
+     *                       `false` - не показывать доп. инф.
+     */
+    public static function import(bool $showInf = false)
     {
+        self::$showInf = $showInf;
         $newCount = $unsavedCount = 0;
 
         [$newCount, $unsavedCount] = self::importFromTable();
@@ -33,9 +43,7 @@ class FlangImportController extends Controller
 
                 try
                 {
-                    $newFlang = Flang::create([
-                        //TODO
-                        //'vid' => ?
+                    $newFlang = Flang::make([
                         'name' => $f->Название_у,
                         'deposit' => $f->Фланг_мест,
                         'isflang' => $f->Явл_фланго,
@@ -50,17 +58,22 @@ class FlangImportController extends Controller
                         'comment' => $f->Примечание,
                         'geom' => $f->geom
                     ]);
-            
-                    $newFlang->refresh();
 
-                    if( count(Flang::where('src_hash', $newFlang->src_hash)->get()) > 1)
+                    $newFlang->src_hash = md5($f->id
+                            //$newFlang->name. $newFlang->deposit . $newFlang->isflang
+                            // . ($newFlang->s_flang ? sprintf("%.3f", $newFlang->s_flang) : null) .  $newFlang->declarant .  $newFlang->edate
+                            // . $newFlang->resol . $newFlang->ssub_rf_id . $newFlang->license_id
+                            // . $newFlang->flang_status_id . $newFlang->comment //. $newFlang->geom
+                            );
+
+                    if(!Flang::where('src_hash', $newFlang->src_hash)->exists())
                     {
-                        $newFlang->delete();
-                        $unsavedCount++;
+                        $newFlang->save();
+                        $newCount++;
                     }
                     else
                     {
-                        $newCount++;
+                        $unsavedCount++;
                     }
                 }
                 catch(Exception $e)
@@ -70,6 +83,8 @@ class FlangImportController extends Controller
                     continue;
                 }
             }
+
+        if(self::$showInf) dump("   Flang frm flangi" .' ('.Flangi::count().') '.  ": Added " . $newCount . ', unsaved ' . $unsavedCount);
 
         return [$newCount, $unsavedCount];
     }
@@ -96,7 +111,7 @@ class FlangImportController extends Controller
         }
         else
         {
-            dump('  Flangi: Ошибочная строка: ' . $licStr . ' лиц. и дата -> null');
+            if(self::$showInf) dump('       Flangi: Ошибочная строка: ' . $licStr . ' лиц. и дата -> null');
             return null;
         };
     }
