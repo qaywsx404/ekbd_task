@@ -42,6 +42,8 @@ class DepositImportController extends Controller
     {
         $newCount = $unsavedCount = 0;
 
+        Deposit::truncate();
+
             foreach(NgMest::all() as $d)
             {
                 try

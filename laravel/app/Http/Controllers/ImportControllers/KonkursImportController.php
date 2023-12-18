@@ -31,6 +31,9 @@ class KonkursImportController extends Controller
         self::$showInf = $showInf;
         $newCount = $unsavedCount = $RelNewCount = 0;
 
+        Konkurs::truncate();
+        RelKonkursPi::truncate();
+
         //konkurs19
         $a = self::importFromTable('Konkurs19');
             $newCount += $a[0]; $unsavedCount += $a[1]; $RelNewCount += $a[2]; 
@@ -144,8 +147,7 @@ class KonkursImportController extends Controller
 
         return $res;
     }
-    private static function getPrevId(?string $name, ?string $ryear) : ?string
-    {
+    private static function getPrevId(?string $name, ?string $ryear) : ?string {
         if(intval($ryear) && $name != null)
         {
             return Konkurs::where('name', $name)
@@ -154,8 +156,7 @@ class KonkursImportController extends Controller
 
         return null;
     }
-    private static function getRYear(string $yearStr) : ?string
-    {
+    private static function getRYear(string $yearStr) : ?string {
         if($yearStr != null && $yearStr != "")
         {
             $res = "";

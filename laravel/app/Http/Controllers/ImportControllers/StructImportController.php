@@ -40,6 +40,8 @@ class StructImportController extends Controller
     {
         $newCount = $unsavedCount = 0;
 
+        Struct::truncate();
+
             foreach(NgStruct::all() as $s)
             {
                 try

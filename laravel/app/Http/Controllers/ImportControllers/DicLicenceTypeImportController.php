@@ -45,6 +45,8 @@ class DicLicenceTypeImportController extends Controller
             $types->add($type);
         foreach(LicPt::distinct('type')->pluck('type')->flatten() as $type)
             $types->add($type);
+
+        $types->add('Э'); 
         
         return $types->toArray();
     }

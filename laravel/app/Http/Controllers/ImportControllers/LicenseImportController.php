@@ -9,8 +9,10 @@ use App\Models\ebd_ekbd\dictionaries\DicPi;
 use App\Models\ebd_ekbd\dictionaries\DicPurpose;
 use App\Models\ebd_ekbd\dictionaries\DicReason;
 use App\Models\ebd_ekbd\dictionaries\DicSsubRf;
+use App\Models\ebd_ekbd\Flang;
 use App\Models\ebd_ekbd\License;
 use App\Models\ebd_ekbd\rel\RelLicensePi;
+use Illuminate\Support\Facades\DB;
 use ErrorException;
 use Exception;
 
@@ -18,6 +20,8 @@ class LicenseImportController extends Controller
 {
     /** Лицензии с ненайдеными прев. лиц. */
     private static $unfLics = [];
+    /** Связанные связи flang */
+    private static $flangLics = [];
     /** Доп. инф. */
     private static $showInf = false;
     
@@ -31,6 +35,13 @@ class LicenseImportController extends Controller
     {
         self::$showInf = $showInf;
         $newCount = $unsavedCount = $RelNewCount = 0;
+
+        //DB::beginTransaction();
+
+        RelLicensePi::truncate();
+        $safl = self::saveFlangLicenses();
+        if(self::$showInf) dump('  FlangLicsSaved: ' . $safl);
+        DB::table('license')->delete();
 
         // lic_exp_ln
         $a = self::importFromLicTable('LicExpLn');
@@ -49,13 +60,17 @@ class LicenseImportController extends Controller
             $newCount += $a[0]; $unsavedCount += $a[1]; $RelNewCount += $a[2];
         
         $plc = self::setPrevLics();
+        $sefl = self::setFlangLicenses();
 
         if(self::$showInf)
         {
             dump("  Added prevLics : " . $plc . " anset PL: " . count(self::$unfLics));
-            dump("  RelLicensePi added: " . $RelNewCount . ' total: ' . RelLicensePi::count());
+            dump('  FlangLicsSet : ' .  $sefl);
+            dump("  RelLicensePi added : " . $RelNewCount . ' total: ' . RelLicensePi::count());
         }
         dump("License total: Added " . $newCount . ', unsaved ' . $unsavedCount);
+        
+        //DB::commit();
     }
     /** 
      * Импорт записей из 5 таблиц ebd_gis.lic*
@@ -73,7 +88,7 @@ class LicenseImportController extends Controller
         {
             foreach($licTableModel::all() as $l) {
                 
-                $prevLic = self::getPrevLicId($l->Старая_лиц);
+                $prevLic = self::getPrevLicId($l->Старая_лиц, ($l->Серия.$l->Номер_лиц.$l->Тип), $licTableName, $l->gid);
 
                 $newLic = License::make([
                     'name' => $l->Название,
@@ -99,18 +114,7 @@ class LicenseImportController extends Controller
                     'geom' => $l->geom
                 ]);
 
-                $newLic->src_hash = md5(//$newLic->name .
-                    $newLic->series . $newLic->number . $newLic->license_type_id
-                        // . $newLic->pi_id
-                        // . $newLic->purpose_id  
-                        // . $newLic->reason_id . date('d-m-Y', strtotime($newLic->rdate) ) . date('d-m-Y', strtotime($newLic->validity) )
-                        // . $newLic->suser . $newLic->suser_inn . $newLic->suser_adr
-                        // . $newLic->founder . $newLic->pcomp . $newLic->prev_license_id
-                        // . $newLic->ssub_rf_code . $newLic->ssub_rf_id . $newLic->arctic_zone_id
-                        // . sprintf("%.3f", $newLic->s_license) . $newLic->comment . $newLic->geom
-                        );
-
-                //dump($newLic->src_hash . ' <-----> ' . $md5 . ' <-----> ' . ($newLic->src_hash == $md5 ? 'T' : 'F'));
+                $newLic->src_hash = md5($newLic->series . $newLic->number . $newLic->license_type_id);
 
                 if(!License::where('src_hash', $newLic->src_hash)->exists())
                 {
@@ -120,6 +124,7 @@ class LicenseImportController extends Controller
                 else
                 {
                     $unsavedCount++;
+                    //if(self::$showInf) dump('   -> Повторная запись не сохранена: ' . $licTableName . ' : gid:' . $l->gid . ' : ' . $newLic->series . $newLic->number . $l->Тип);
                 }
 
                 foreach(self::splitPi($l->Пол_ископ) as $pi)
@@ -141,7 +146,8 @@ class LicenseImportController extends Controller
                 }
             }
         }
-        catch(Exception $e){ dd($e); }
+        catch(Exception $e){ //DB::rollBack(); 
+            dd($e); }
 
         if(self::$showInf) dump("  License frm " . $licTableName .' ('.$licTableModel::count().') '.  ": Added " . $newCount . ', unsaved ' . $unsavedCount);
         
@@ -230,7 +236,7 @@ class LicenseImportController extends Controller
         } 
         return null;
     }
-    private static function getPrevLicId(?string $licPrevLic) : ?array {
+    private static function getPrevLicId(?string $licPrevLic, $lic = null, $ltn = null, $l = null) : ?array {
         if($licPrevLic) {
             $spltPrevLic = self::splitPrevLic($licPrevLic);
 
@@ -248,10 +254,43 @@ class LicenseImportController extends Controller
                 }
             }
             else {
-                if(self::$showInf) dump('       Прев. лиц задана неверно -> вернется нулл.  Полученная строка: ' . $licPrevLic);
+                if(self::$showInf) dump('       Прев. лиц для ' . $lic . ' задана неверно -> set null. Полученная строка: ' . $licPrevLic . ' из ' . $ltn . ' gid: '. $l);
                 return null;
             }       
         }
         return null;
+    }
+    private static function saveFlangLicenses() : int {
+        $saveCount = 0;
+        
+        foreach(Flang::all() as $f)
+        {
+            if($f->license_id)
+            {
+                $l = License::find($f->license_id);
+                self::$flangLics[$f->id] = [
+                    'series' => $l['series'],
+                    'number' => $l['number'],
+                    'type_id' => $l['license_type_id']
+                ];
+
+                $saveCount++;
+            }
+        }
+        
+        return $saveCount;
+    }
+    private static function setFlangLicenses() : int {
+        $setCount = 0;
+        
+        foreach(self::$flangLics as $f => $l)
+        {
+            $F = Flang::find($f);
+            $F->license_id = License::where( 'src_hash', md5($l['series'] . $l['number'] . $l['type_id']) )->first()?->id;
+            $F->save();
+            $setCount++;
+        }
+        
+        return $setCount;
     }
 }
