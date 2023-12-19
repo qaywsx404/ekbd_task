@@ -9,10 +9,8 @@ use App\Models\ebd_ekbd\dictionaries\DicPi;
 use App\Models\ebd_ekbd\dictionaries\DicPurpose;
 use App\Models\ebd_ekbd\dictionaries\DicReason;
 use App\Models\ebd_ekbd\dictionaries\DicSsubRf;
-use App\Models\ebd_ekbd\Flang;
 use App\Models\ebd_ekbd\License;
 use App\Models\ebd_ekbd\rel\RelLicensePi;
-use Illuminate\Support\Facades\DB;
 use ErrorException;
 use Exception;
 
@@ -36,13 +34,6 @@ class LicenseImportController extends Controller
         self::$showInf = $showInf;
         $newCount = $unsavedCount = $RelNewCount = 0;
 
-        //DB::beginTransaction();
-
-        RelLicensePi::truncate();
-        $safl = self::saveFlangLicenses();
-        if(self::$showInf) dump('  FlangLicsSaved: ' . $safl);
-        DB::table('license')->delete();
-
         // lic_exp_ln
         $a = self::importFromLicTable('LicExpLn');
             $newCount += $a[0]; $unsavedCount += $a[1]; $RelNewCount += $a[2];
@@ -60,12 +51,9 @@ class LicenseImportController extends Controller
             $newCount += $a[0]; $unsavedCount += $a[1]; $RelNewCount += $a[2];
         
         $plc = self::setPrevLics();
-        $sefl = self::setFlangLicenses();
-
         if(self::$showInf)
         {
             dump("  Added prevLics : " . $plc . " anset PL: " . count(self::$unfLics));
-            dump('  FlangLicsSet : ' .  $sefl);
             dump("  RelLicensePi added : " . $RelNewCount . ' total: ' . RelLicensePi::count());
         }
         dump("License total: Added " . $newCount . ', unsaved ' . $unsavedCount);
@@ -88,7 +76,7 @@ class LicenseImportController extends Controller
         {
             foreach($licTableModel::all() as $l) {
                 
-                $prevLic = self::getPrevLicId($l->Старая_лиц, ($l->Серия.$l->Номер_лиц.$l->Тип), $licTableName, $l->gid);
+                $prevLic = self::getPrevLicId($l->Старая_лиц, md5($l->Серия . $l->Номер_лиц . self::getLicTypeId($l->Тип)), $licTableName, $l->gid);
 
                 $newLic = License::make([
                     'name' => $l->Название,
@@ -146,8 +134,7 @@ class LicenseImportController extends Controller
                 }
             }
         }
-        catch(Exception $e){ //DB::rollBack(); 
-            dd($e); }
+        catch(Exception $e){ dd($e); }
 
         if(self::$showInf) dump("  License frm " . $licTableName .' ('.$licTableModel::count().') '.  ": Added " . $newCount . ', unsaved ' . $unsavedCount);
         
@@ -236,7 +223,7 @@ class LicenseImportController extends Controller
         } 
         return null;
     }
-    private static function getPrevLicId(?string $licPrevLic, $lic = null, $ltn = null, $l = null) : ?array {
+    private static function getPrevLicId(?string $licPrevLic, $licHash = null, $ltn = null, $l = null) : ?array {
         if($licPrevLic) {
             $spltPrevLic = self::splitPrevLic($licPrevLic);
 
@@ -254,43 +241,10 @@ class LicenseImportController extends Controller
                 }
             }
             else {
-                if(self::$showInf) dump('       Прев. лиц для ' . $lic . ' задана неверно -> set null. Полученная строка: ' . $licPrevLic . ' из ' . $ltn . ' gid: '. $l);
+                if(self::$showInf) dump('       Прев. лиц для лиц. с hash: ' . $licHash . ' задана неверно -> set null. Полученная строка: ' . $licPrevLic . ' из ' . $ltn . ' gid: '. $l);
                 return null;
             }       
         }
         return null;
-    }
-    private static function saveFlangLicenses() : int {
-        $saveCount = 0;
-        
-        foreach(Flang::all() as $f)
-        {
-            if($f->license_id)
-            {
-                $l = License::find($f->license_id);
-                self::$flangLics[$f->id] = [
-                    'series' => $l['series'],
-                    'number' => $l['number'],
-                    'type_id' => $l['license_type_id']
-                ];
-
-                $saveCount++;
-            }
-        }
-        
-        return $saveCount;
-    }
-    private static function setFlangLicenses() : int {
-        $setCount = 0;
-        
-        foreach(self::$flangLics as $f => $l)
-        {
-            $F = Flang::find($f);
-            $F->license_id = License::where( 'src_hash', md5($l['series'] . $l['number'] . $l['type_id']) )->first()?->id;
-            $F->save();
-            $setCount++;
-        }
-        
-        return $setCount;
     }
 }
