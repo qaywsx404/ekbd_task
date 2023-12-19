@@ -71,7 +71,7 @@ class KonkursImportController extends Controller
                     'purpose_id' => $k->Цель ? DicPurpose::where('value', $k->Цель)->first()?->id : null,
                     'ryear' => self::getRYear($k->Год_включ),
                     'comp_form_id' => $k->Ф_состязан ? DicCompForm::where('value', $k->Ф_состязан)->first()?->id : null,
-                    'ssub_rf_id' => $k->Регион ? DicSsubRf::where('value', $k->Регион)->first()?->id : null,
+                    'ssub_rf_id' => self::getSsubId($k->Регион),
                     's_konkurs' => $k->Площадь ? str_ireplace(['/', ',', ' '], '.', $k->Площадь) : null,
                     'prev_konkurs_id' => self::getPrevId($k->Название_у, self::getRYear($k->Год_включ)),
                     'prev_txt' => $k->Переход,
@@ -166,6 +166,26 @@ class KonkursImportController extends Controller
             return $res[1][0];
         }
 
+        return null;
+    }
+    private static function getSsubId(?string $ssub) : ?string {
+        if($ssub)
+        {
+            if(str_contains($ssub, 'Шельф')) $ssub = 'Шельф Российской Федерации';
+            if(str_contains($ssub, 'Ямало-Ненецкий АО')) $ssub = 'Ямало-Ненецкий автономный округ';
+            if(str_contains($ssub, 'Республика Саха(Якутия)')) $ssub = 'Республика Саха';
+
+            $ssubId = DicSsubRf::where('region_name', $ssub)
+                                ->orWhere('region_name', 'ilike', '%'.$ssub.'%')
+                                ->first()?->id;
+            
+            if($ssubId) return $ssubId;
+            else
+            {
+                dump('        СФ не найден: ' . $ssub);
+                return null;
+            }
+        } 
         return null;
     }
 }

@@ -57,7 +57,7 @@ class ZapovednikImportController extends Controller
                         'zapovednik_importance_id' => $z->значение_о ? DicZapovednikImportance::where('value',  $z->значение_о)->first()?->id : null,
                         'zapovednik_profile_id' => $z->Профиль ? DicZapovednikProfile::where('value',  $z->Профиль)->first()?->id : null,
                         'zapovednik_state_id' => $z->Текущий_ст ? DicZapovednikState::where('value',  $z->Текущий_ст)->first()?->id : null,
-                        'ssub_rf_id' => $z->Регион ? DicSsubRf::where('value',  $z->Регион)->first()?->id : null,
+                        'ssub_rf_id' => self::getSsubId($z->Регион),
                         's_zapovednik' => self::getS($z->Площадь_км),
                         'ohr_zona' => self::getS($z->Охранная_з),
                         'rdate' => self::getRDate($z->Дата_созда),
@@ -120,6 +120,44 @@ class ZapovednikImportController extends Controller
             if(self::$showInf) dump("       Дата неверного формата : " . $str . " ->null");
         }
         
+        return null;
+    }
+    private static function getSsubId(?string $ssub) : ?string {
+        if($ssub)
+        {
+            $ssub = str_ireplace('облать', 'область', $ssub);
+            $ssub = str_ireplace('  ', ' ', $ssub);
+            if(str_contains($ssub, 'Шельф')) $ssub = 'Шельф';
+            if(str_contains($ssub, 'Красноярский край')) $ssub = 'Красноярский край';
+            if(str_contains($ssub, 'Эвенкийский')) $ssub = 'Красноярский край';
+            if(str_contains($ssub, 'Алания')) $ssub = 'Алания';
+            if(str_contains($ssub, 'Волгоградская')) $ssub = 'Волгоградская';
+            if(str_contains($ssub, 'Ямало-Ненецкий')) $ssub = 'Ямало-Ненецкий';
+            if($ssub == 'Ненецкий АО') $ssub = 'Ненецкий автономный округ';
+            if(str_contains($ssub, 'о.Домашний')) $ssub = 'Красноярский край';
+            if(str_contains($ssub, 'Кандалакшский залив')) $ssub = 'Карелия'; // ?
+            if(str_contains($ssub, 'Югра')) $ssub = 'Югра';
+            if(str_contains($ssub, 'Камчатка')) $ssub = 'Камчатский край';
+            if(str_contains($ssub, 'Саратовская рбласть')) $ssub = 'Саратовская область';
+            if(str_contains($ssub, 'Таймырский (Долгано-Ненецкий) а.о')) $ssub = 'Красноярский край'; // ?
+            if(str_contains($ssub, 'Оренбурская область')) $ssub = 'Оренбургская область';
+            if(str_contains($ssub, 'п-ов Парижской Коммуны')) $ssub = 'Красноярский край';
+            if(str_contains($ssub, 'о.Октябрьской Революции')) $ssub = 'Красноярский край';
+            if(str_contains($ssub, 'Вологодская область Ярославская область')) $ssub = 'Вологодская область';
+            if(str_contains($ssub, 'Баштортостан')) $ssub = 'Башкортостан';
+            if(str_contains($ssub, 'о. Большевик')) $ssub = 'Красноярский край';
+
+            $ssubId = DicSsubRf::where('region_name', $ssub)
+                                ->orWhere('region_name', 'ilike', '%'.$ssub.'%')
+                                ->first()?->id;
+            
+            if($ssubId) return $ssubId;
+            else
+            {
+                dump('        СФ не найден: ' . $ssub);
+                return null;
+            }
+        } 
         return null;
     }
 }

@@ -51,8 +51,8 @@ class StructImportController extends Controller
                         'deposit_type_id' => $s->Тип ? DicDepositType::where('value', $s->Тип)->first()?->id : null,
                         'deposit_stage_id' => $s->Стадия ? DicDepositStage::where('value', $s->Стадия)->first()?->id : null,
                         'ng_struct' => $s->Отложения,
-                        'oblast_ssub_rf_id' => $s->Область ? DicSsubRf::where('value', $s->Область)->first()?->id : null,
-                        'okrug_ssub_rf_id' => $s->Округ ? DicSsubRf::where('value', $s->Округ)->first()?->id : null,
+                        'oblast_ssub_rf_id' => self::getSsubId($s->Область),
+                        'okrug_ssub_rf_id' => self::getSsubId($s->Округ),
                         'ngp_id' => $s->ngp ? Ngp::where('name', $s->ngp)->first()?->id : null,
                         'ngo_id' => $s->ngo ? Ngo::where('name', $s->ngo)->first()?->id : null,
                         'ngr_id' => $s->ngr ? Ngr::where('name', $s->ngr)->first()?->id : null,
@@ -95,5 +95,26 @@ class StructImportController extends Controller
         if(self::$showInf) dump("   Struct frm ng_struct" .' ('.NgStruct::count().') '.  ": Added " . $newCount . ', unsaved ' . $unsavedCount);
 
         return [$newCount, $unsavedCount];
+    }
+    private static function getSsubId(?string $ssub) : ?string {
+        if($ssub)
+        {
+            if(str_contains($ssub, 'Шельф')) $ssub = 'Шельф';
+            if(str_contains($ssub, 'Сев.-Западный')) $ssub = 'Северо-Западный федеральный округ';
+            if(str_contains($ssub, 'Алания')) $ssub = 'Алания';
+            if(str_contains($ssub, 'Хакассия')) $ssub = 'Хакасия';
+
+            $ssubId = DicSsubRf::where('region_name', $ssub)
+                                ->orWhere('region_name', 'ilike', '%'.$ssub.'%')
+                                ->first()?->id;
+            
+            if($ssubId) return $ssubId;
+            else
+            {
+                dump('        СФ не найден: ' . $ssub);
+                return null;
+            }
+        } 
+        return null;
     }
 }

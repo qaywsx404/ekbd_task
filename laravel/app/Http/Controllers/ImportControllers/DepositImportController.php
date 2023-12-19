@@ -53,8 +53,8 @@ class DepositImportController extends Controller
                         'deposit_type_id' => $d->Тип ? DicDepositType::where('value', $d->Тип)->first()?->id : null,
                         'deposit_stage_id' => $d->Стадия ? DicDepositStage::where('value', $d->Стадия)->first()?->id : null,
                         'dyear' => $d->Год_откр,
-                        'oblast_ssub_rf_id' => $d->Область ? DicSsubRf::where('value', $d->Область)->first()?->id : null,
-                        'okrug_ssub_rf_id' => $d->Округ ? DicSsubRf::where('value', $d->Округ)->first()?->id : null,
+                        'oblast_ssub_rf_id' => self::getSsubId($d->Область),
+                        'okrug_ssub_rf_id' => self::getSsubId($d->Округ),
                         'ngp_id' => $d->ngp ? Ngp::where('name', $d->ngp)->first()?->id : null,
                         'ngo_id' => $d->ngo ? Ngo::where('name', $d->ngo)->first()?->id : null,
                         'ngr_id' => $d->ngr ? Ngr::where('name', $d->ngr)->first()?->id : null,
@@ -91,5 +91,26 @@ class DepositImportController extends Controller
         if(self::$showInf) dump("   Deposit frm ng_mest" .' ('.NgMest::count().') '.  ": Added " . $newCount . ', unsaved ' . $unsavedCount);
 
         return [$newCount, $unsavedCount];
+    }
+    private static function getSsubId(?string $ssub) : ?string {
+        if($ssub)
+        {
+            if(str_contains($ssub, 'Шельф')) $ssub = 'Шельф';
+            if(str_contains($ssub, 'Алания')) $ssub = 'Алания';
+            if(str_contains($ssub, 'Крымский')) $ssub = 'Крым';
+
+
+            $ssubId = DicSsubRf::where('region_name', $ssub)
+                                ->orWhere('region_name', 'ilike', '%'.$ssub.'%')
+                                ->first()?->id;
+            
+            if($ssubId) return $ssubId;
+            else
+            {
+                dump('        СФ не найден: ' . $ssub);
+                return null;
+            }
+        } 
+        return null;
     }
 }

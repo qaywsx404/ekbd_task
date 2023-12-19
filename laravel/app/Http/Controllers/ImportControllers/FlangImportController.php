@@ -51,7 +51,7 @@ class FlangImportController extends Controller
                         'declarant' => $f->Заявитель,
                         'edate' => $f->Дата_экспе,
                         'resol' => $f->Резолюция_,
-                        'ssub_rf_id' => $f->Регион ? DicSsubRf::where('value', $f->Регион)->first()->id : null,
+                        'ssub_rf_id' => self::getSsubId($f->Регион),
                         'license_id' => $licAndDate ? $licAndDate[0] : null,
                         'rdate' => $licAndDate ? $licAndDate[1] : null,
                         'flang_status_id' => $f->Статус_по_ ? DicFlangStatus::where('value', $f->Статус_по_)->first()->id : null,
@@ -59,12 +59,7 @@ class FlangImportController extends Controller
                         'geom' => $f->geom
                     ]);
 
-                    $newFlang->src_hash = md5($f->id
-                            //$newFlang->name. $newFlang->deposit . $newFlang->isflang
-                            // . ($newFlang->s_flang ? sprintf("%.3f", $newFlang->s_flang) : null) .  $newFlang->declarant .  $newFlang->edate
-                            // . $newFlang->resol . $newFlang->ssub_rf_id . $newFlang->license_id
-                            // . $newFlang->flang_status_id . $newFlang->comment //. $newFlang->geom
-                            );
+                    $newFlang->src_hash = md5($f->id);
 
                     if(!Flang::where('src_hash', $newFlang->src_hash)->exists())
                     {
@@ -114,5 +109,26 @@ class FlangImportController extends Controller
             if(self::$showInf) dump('       Flangi: Ошибочная строка: ' . $licStr . ' лиц. и дата -> null');
             return null;
         };
+    }
+    private static function getSsubId(?string $ssub) : ?string {
+        if($ssub)
+        {
+            if(str_contains($ssub, 'ХМАО')) $ssub = 'Ханты-Мансийский автономный округ';
+            if(str_contains($ssub, 'ЯНАО')) $ssub = 'Ямало-Ненецкий автономный округ';
+            if(str_contains($ssub, 'НАО')) $ssub = 'Ненецкий автономный округ';
+            if(str_contains($ssub, 'Чукотский АО')) $ssub = 'Чукотский автономный округ';
+
+            $ssubId = DicSsubRf::where('region_name', $ssub)
+                                ->orWhere('region_name', 'ilike', '%'.$ssub.'%')
+                                ->first()?->id;
+            
+            if($ssubId) return $ssubId;
+            else
+            {
+                dump('        СФ не найден: ' . $ssub);
+                return null;
+            }
+        } 
+        return null;
     }
 }

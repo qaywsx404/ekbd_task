@@ -94,9 +94,9 @@ class LicenseImportController extends Controller
                     'founder' => $l->Учредители,
                     'pcomp' => $l->Гол_предпр,
                     'prev_license_id' => $prevLic ? ($prevLic[0] ? $prevLic[1] : null) : null,
-                    'ssub_rf_code' => DicSsubRf::where('value', $l->Назв_СФ)?->first()->id,
-                    'ssub_rf_id' => DicSsubRf::where('value', $l->Назв_СФ)?->first()->id,
-                    'arctic_zone_id' => DicArcticZone::where('value', $l->Аркт_зона)?->first()->id,
+                    'ssub_rf_code' => $l->Код_СФ,
+                    'ssub_rf_id' => self::getSsubId($l->Назв_СФ),
+                    'arctic_zone_id' => DicArcticZone::where('value', $l->Аркт_зона)->first()?->id,
                     's_license' => $l->s_лиц,
                     'comment' => $l->Примечание,
                     'geom' => $l->geom
@@ -245,6 +245,28 @@ class LicenseImportController extends Controller
                 return null;
             }       
         }
+        return null;
+    }
+    private static function getSsubId(?string $ssub) : ?string {
+        if($ssub)
+        {
+            if(str_contains($ssub, 'Шельф')) $ssub = 'Шельф Российской Федерации';
+            if(str_contains($ssub, 'Республика Калмыкия')) $ssub = 'Республика Калмыкия';
+            if(str_contains($ssub, 'Красноярский край')) $ssub = 'Красноярский край';
+            if(str_contains($ssub, 'Республика Северная-Осетия')) $ssub = 'Республика Северная Осетия';
+            if(str_contains($ssub, 'Республика Марий-Эл')) $ssub = 'Республика Марий Эл';
+
+            $ssubId = DicSsubRf::where('region_name', $ssub)
+                                ->orWhere('region_name', 'ilike', '%'.$ssub.'%')
+                                ->first()?->id;
+            
+            if($ssubId) return $ssubId;
+            else
+            {
+                dump('        СФ не найден: ' . $ssub);
+                return null;
+            }
+        } 
         return null;
     }
 }
