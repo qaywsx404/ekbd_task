@@ -32,7 +32,7 @@ class StructImportController extends Controller
 
         [$newCount, $unsavedCount] = self::importFromTable();
 
-        dump("Struct total: Added " . $newCount . ', unsaved ' . $unsavedCount);
+        dump("Struct импорт завершен: добавлено " . $newCount . ', не добавлено ' . $unsavedCount);
     }
 
     /**  Импорт записей из таблиц  ebd_gis.ng_struct */
@@ -51,11 +51,11 @@ class StructImportController extends Controller
                         'deposit_type_id' => $s->Тип ? DicDepositType::where('value', $s->Тип)->first()?->id : null,
                         'deposit_stage_id' => $s->Стадия ? DicDepositStage::where('value', $s->Стадия)->first()?->id : null,
                         'ng_struct' => $s->Отложения,
-                        'oblast_ssub_rf_id' => self::getSsubId($s->Область),
-                        'okrug_ssub_rf_id' => self::getSsubId($s->Округ),
-                        'ngp_id' => $s->ngp ? Ngp::where('name', $s->ngp)->first()?->id : null,
-                        'ngo_id' => $s->ngo ? Ngo::where('name', $s->ngo)->first()?->id : null,
-                        'ngr_id' => $s->ngr ? Ngr::where('name', $s->ngr)->first()?->id : null,
+                        'oblast_ssub_rf_id' => self::getSsubId($s->Область, 'oblast_ssub_rf_id', $s),
+                        'okrug_ssub_rf_id' => self::getSsubId($s->Округ, 'okrug_ssub_rf_id', $s),
+                        'ngp_id' => $s->ngp ? (Ngp::where('name', $s->ngp)->first()?->id ?? self::getEx($s, 'ngp_id', $s->ngp)) : null,
+                        'ngo_id' => $s->ngo ? (Ngo::where('name', 'ilike', $s->ngo)->first()?->id ?? self::getEx($s, 'ngo_id', $s->ngo)) : null,
+                        'ngr_id' => self::getNgrId($s->ngr, $s),
                         'arctic_zone_id' => $s->Аркт_зона ? DicArcticZone::where('value',$s->Аркт_зона)->first()?->id : null,
                         'syear' => $s->Год_ввода,
                         'lastyear' => $s->Год_списан,
@@ -92,11 +92,9 @@ class StructImportController extends Controller
                 }
             }
 
-        if(self::$showInf) dump("   Struct frm ng_struct" .' ('.NgStruct::count().') '.  ": Added " . $newCount . ', unsaved ' . $unsavedCount);
-
         return [$newCount, $unsavedCount];
     }
-    private static function getSsubId(?string $ssub) : ?string {
+    private static function getSsubId(?string $ssub, string $attr, &$ngStruct) : ?string {
         if($ssub)
         {
             if(str_contains($ssub, 'Шельф')) $ssub = 'Шельф';
@@ -111,10 +109,40 @@ class StructImportController extends Controller
             if($ssubId) return $ssubId;
             else
             {
-                dump('        СФ не найден: ' . $ssub);
+                echo ("\t - Неверная строка или не найдена запись для struct: $attr: \"$ssub\"
+                    \r\t\tиз таблицы NgStruct: gid: $ngStruct->gid, $ngStruct->СПИСОК_СТР, область: $ngStruct->Область, округ: $ngStruct->Округ\r\n");
                 return null;
             }
         } 
+        return null;
+    }
+    private static function getNgrId(?string $ngr, &$ngStruct) : ?string {
+        if($ngr)
+        {
+            $ngr = str_ireplace('  ', ' ', $ngr);
+            $ngr = str_ireplace('ё', 'е', $ngr);
+            if($ngr == 'Черемшанско-Байтуганский НГР') $ngr = 'ЧЕРЕМШАНО-БАЙТУГАНСКИЙ НГР';
+
+            $ngrId = Ngr::where('name', 'ilike', $ngr)->first()?->id;
+
+            if($ngrId)
+                return $ngrId;
+            
+            echo ("\t - Неверная строка или не найдена запись для Struct: ngr_id: \"$ngr\"
+                    \r\t\tиз таблицы NgStruct: gid: $ngStruct->gid, $ngStruct->СПИСОК_СТР, ngr: $ngStruct->ngr\r\n");
+            
+            return null;
+        } 
+        return null;
+    }
+    private static function getEx(&$ngStruct, $attrName, $attrVal)
+    {
+        if($attrVal)
+        {
+            echo("\t - Неверная строка или не найдена запись для Deposit: $attrName : \"$attrVal\"
+            \tNgStruct: gid: $ngStruct->gid, $ngStruct->СПИСОК_СТР, ngo: $ngStruct->ngo, ngr: $ngStruct->ngr, ngp: $ngStruct->ngp\r\n");
+        }
+        
         return null;
     }
 }

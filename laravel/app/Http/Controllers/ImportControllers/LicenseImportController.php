@@ -18,8 +18,6 @@ class LicenseImportController extends Controller
 {
     /** Лицензии с ненайдеными прев. лиц. */
     private static $unfLics = [];
-    /** Связанные связи flang */
-    private static $flangLics = [];
     /** Доп. инф. */
     private static $showInf = false;
     
@@ -33,6 +31,8 @@ class LicenseImportController extends Controller
     {
         self::$showInf = $showInf;
         $newCount = $unsavedCount = $RelNewCount = 0;
+
+        if(self::$showInf) dump("Импорт License:");
 
         // lic_exp_ln
         $a = self::importFromLicTable('LicExpLn');
@@ -51,14 +51,13 @@ class LicenseImportController extends Controller
             $newCount += $a[0]; $unsavedCount += $a[1]; $RelNewCount += $a[2];
         
         $plc = self::setPrevLics();
+
         if(self::$showInf)
         {
-            dump("  Added prevLics : " . $plc . " anset PL: " . count(self::$unfLics));
-            dump("  RelLicensePi added : " . $RelNewCount . ' total: ' . RelLicensePi::count());
+            echo ("\tprev_license_id добавлено: $plc, не найдено подходящих лицензий: " . count(self::$unfLics)-$plc . "\r\n");
+            echo "\t"; dump("RelLicensePi сделано записей: $RelNewCount, всего: " . RelLicensePi::count());
         }
-        dump("License total: Added " . $newCount . ', unsaved ' . $unsavedCount);
-        
-        //DB::commit();
+        dump("License импорт завершен: добавлено " . $newCount . ', не добавлено ' . $unsavedCount);
     }
     /** 
      * Импорт записей из 5 таблиц ebd_gis.lic*
@@ -76,13 +75,13 @@ class LicenseImportController extends Controller
         {
             foreach($licTableModel::all() as $l) {
                 
-                $prevLic = self::getPrevLicId($l->Старая_лиц, md5($l->Серия . $l->Номер_лиц . self::getLicTypeId($l->Тип)), $licTableName, $l->gid);
+                $prevLic = self::getPrevLicId($l->Старая_лиц, $licTableName, $l);
 
                 $newLic = License::make([
                     'name' => $l->Название,
                     'series' => $l->Серия,
                     'number' => $l->Номер_лиц,
-                    'license_type_id' => self::getLicTypeId($l->Тип),
+                    'license_type_id' => self::getLicTypeId($l->Тип, $licTableName),
                     'status' => null, // нет данных для заполнения
                     'purpose_id' =>  self::getPurposeId($l->Цель),
                     'reason_id' =>  self::getReasId($l->Осн_выдачи),
@@ -93,7 +92,7 @@ class LicenseImportController extends Controller
                     'suser_adr' => $l->Адрес,
                     'founder' => $l->Учредители,
                     'pcomp' => $l->Гол_предпр,
-                    'prev_license_id' => $prevLic ? ($prevLic[0] ? $prevLic[1] : null) : null,
+                    'prev_license_id' => $prevLic,
                     'ssub_rf_code' => $l->Код_СФ,
                     'ssub_rf_id' => self::getSsubId($l->Назв_СФ),
                     'arctic_zone_id' => DicArcticZone::where('value', $l->Аркт_зона)->first()?->id,
@@ -108,36 +107,48 @@ class LicenseImportController extends Controller
                 {
                     $newLic->save();
                     $newCount++;
+
+                    if( ($prevLic == null) && ($l->Старая_лиц != null) )
+                    {
+                        self::$unfLics[$newLic->id] = $l->Старая_лиц;
+                    }
+                    
+                    foreach(self::splitPi($l->Пол_ископ) as $pi)
+                    {
+                        if(($newLic->id != null) && ($newLic->id != ""))
+                        {
+                            $newRel = RelLicensePi::firstOrCreate([
+                                'license_id' => $newLic->id,
+                                'pi_id' => DicPi::where('value', $pi)->first()?->id
+                            ]);
+
+                            if($newRel->wasRecentlyCreated) $RelNewCount++;
+                        }
+                    }
+
                 }
                 else
                 {
                     $unsavedCount++;
-                    //if(self::$showInf) dump('   -> Повторная запись не сохранена: ' . $licTableName . ' : gid:' . $l->gid . ' : ' . $newLic->series . $newLic->number . $l->Тип);
-                }
 
-                foreach(self::splitPi($l->Пол_ископ) as $pi)
-                {
-                    if(($newLic->id != null) && ($newLic->id != ""))
+                    if(self::$showInf)
                     {
-                        $newRel = RelLicensePi::firstOrCreate([
-                            'license_id' => $newLic->id,
-                            'pi_id' => DicPi::where('value', $pi)->first()?->id
-                        ]);
+                        $ll = License::where('src_hash', $newLic->src_hash)->first();
 
-                        if($newRel->wasRecentlyCreated) $RelNewCount++;
+                        echo ("\t - Не сохранена строка с повторным hash: $newLic->src_hash
+                        \r\t\tиз таблицы $licTableName: gid: $l->gid, $l->Название, $l->Серия $l->Номер_лиц $l->Тип
+                        \r\t\tсуществующая запись: id: $ll?->id, $ll?->name, $ll?->series $ll?->number\r\n");
                     }
-                }
-
-                if($prevLic != null && !$prevLic[0])
-                {
-                    self::$unfLics = [License::where('src_hash')->first()?->id => $prevLic[1]];
                 }
             }
         }
         catch(Exception $e){ dd($e); }
 
-        if(self::$showInf) dump("  License frm " . $licTableName .' ('.$licTableModel::count().') '.  ": Added " . $newCount . ', unsaved ' . $unsavedCount);
-        
+        if(self::$showInf)
+        {
+            dump("License из таблицы $licTableName(".$licTableModel::count()."): добавлено $newCount, не добавлено $unsavedCount");
+        }
+
         return [$newCount, $unsavedCount, $RelNewCount];
     }
     private static function setPrevLics() : int
@@ -146,33 +157,15 @@ class LicenseImportController extends Controller
 
         foreach(self::$unfLics as $id => $pl)
         {
-
-            if($id != "") {   
+            if($id && $pl)
+            {   
                 $l = License::find($id);
                 
-                if(License::find($id)->exists())
-                {
-                    $spltPL = self::splitPrevLic($pl);
+                $l->prev_license_id = self::getPrevLicId($pl);
+                $l->save();
 
-                    $pl = License::where('series', $spltPL[1])
-                                    ->where('number', $spltPL[2])
-                                    ->where('license_type_id', self::getLicTypeId($spltPL[3]))
-                                    ->first();
-
-                    if($pl)
-                    {
-                        $l->prev_license_id = $pl?->id;
-                        $l->save();
-                        $counter++;
-                        unset(self::$unfLics[$id]);
-                    }
-                    else
-                    {
-                        $l->prev_license_id = null;
-                        $l->save();
-                        //unset(self::$unfLics[$id]);
-                    }
-                }
+                if($l->prev_license_id != null)
+                    $counter++;
             }
         }
 
@@ -191,12 +184,14 @@ class LicenseImportController extends Controller
         }
         return null;
     }
-    private static function getLicTypeId(?string $licType) : ?string {
+    private static function getLicTypeId(?string $licType, ?string $tableName = "-") : ?string {
         if($licType) {
            $type = DicLicenseType::where('value', $licType)->first();
            if($type) return $type->id;
-           else {
-                if(self::$showInf) dump('       Тип лицензии задан, но не найден: ' . $licType);
+           else
+           {
+                if(self::$showInf) echo("\t- Не найдено license:type, получена строка \"$licType\" из таблицы $tableName\r\n");
+                
                 return null;
            }
         } 
@@ -223,9 +218,9 @@ class LicenseImportController extends Controller
         } 
         return null;
     }
-    private static function getPrevLicId(?string $licPrevLic, $licHash = null, $ltn = null, $l = null) : ?array {
-        if($licPrevLic) {
-            $spltPrevLic = self::splitPrevLic($licPrevLic);
+    private static function getPrevLicId(?string $prevLicStr, string $licTableName = "-", &$gLic = null) : ?string {
+        if($prevLicStr) {
+            $spltPrevLic = self::splitPrevLic($prevLicStr);
 
             if(count($spltPrevLic) == 4) {
                 $pl = License::where('series', $spltPrevLic[1])
@@ -233,15 +228,16 @@ class LicenseImportController extends Controller
                                 ->where('license_type_id', self::getLicTypeId($spltPrevLic[3]))
                                 ->first();
 
-                if($pl) return [true, $pl->id];
-                else {
-                    //dump('Прев. лиц задана, но не найдена: ' . $licPrevLic . ' -> ' . $spltPrevLic[1] .'-'. $spltPrevLic[2].'-'. $spltPrevLic[3]);
-                    self::$unfLics[] = $licPrevLic;
-                    return [false, $licPrevLic];
+                if($pl) return $pl->id;
+                else
+                {
+                    return null;
                 }
             }
             else {
-                if(self::$showInf) dump('       Прев. лиц для лиц. с hash: ' . $licHash . ' задана неверно -> set null. Полученная строка: ' . $licPrevLic . ' из ' . $ltn . ' gid: '. $l);
+                if(self::$showInf && $gLic)
+                    echo ("\t - Ошибочная строка для License: prev_license_id: $prevLicStr
+                    \r\t\tиз таблицы $licTableName: gid: $gLic->gid, $gLic->Название, $gLic->Серия $gLic->Номер_лиц $gLic->Тип, Старая лиц.: $gLic->Старая_лиц\r\n");
                 return null;
             }       
         }

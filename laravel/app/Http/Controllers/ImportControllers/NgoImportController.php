@@ -25,11 +25,11 @@ class NgoImportController extends Controller
         $newCount = 0;
 
         Ngo::truncate();
-        if(self::$showInf) dump("   Ngo tr");
+        if(self::$showInf) echo("\tngo очищено\r\n");
 
         $newCount = self::importFromTable();
 
-        dump("Ngo total: Added " . $newCount . ' of ' . Ngo2019::count());
+        dump("Ngo импорт завершен: добавлено " . $newCount . ' из ' . Ngo2019::count());
     }
 
     /**  Импорт записей из таблицы  ebd_gis.ngo_2019 */
@@ -41,8 +41,8 @@ class NgoImportController extends Controller
             {
                 Ngo::create([
                     'name' => $n->region,
-                    'ngo_type_id' => $n->type_ngo ? DicNgoType::where('value', $n->type_ngo)->first()->id : null,
-                    'ngp_id' => $n->province ? Ngp::where('name', $n->province)->first()->id : null,
+                    'ngo_type_id' => $n->type_ngo ? (DicNgoType::where('value', $n->type_ngo)->first()->id ?? self::getEx('ngo_type_id', $n->type_ngo)) : null,
+                    'ngp_id' => $n->province ? (Ngp::where('name', $n->province)->first()->id ?? self::getEx('ngp_id', $n->province)) : null,
                     'index_all' => $n->index_all,
                     'comment' => null,
                     'geom' => $n->geom
@@ -52,5 +52,16 @@ class NgoImportController extends Controller
             }
 
         return $newCount;
+    }
+
+    private static function getEx($attrName, $attrVal)
+    {
+        if($attrVal)
+        {
+            echo("\tНеверная строка или не найдена запись для Deposit: $attrName : \"$attrVal\"
+            \t\r\n");
+        }
+        
+        return null;
     }
 }

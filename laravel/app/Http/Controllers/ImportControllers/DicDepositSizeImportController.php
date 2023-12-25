@@ -21,10 +21,8 @@ class DicDepositSizeImportController extends Controller
 
             if($ob->wasRecentlyCreated) $newCount++;
         }
-
-        //dump(self::getUniqueDepositSize());
-
-        dump("DicDepositSize: Added " . $newCount);
+        
+        echo("\tDicDepositSize: added $newCount, total: " . DicDepositSize::count() . "\r\n");
     }
 
     /** 

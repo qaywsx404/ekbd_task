@@ -50,8 +50,8 @@ class KonkursImportController extends Controller
         $a = self::importFromTable('Konkurs23');
             $newCount += $a[0]; $unsavedCount += $a[1]; $RelNewCount += $a[2]; 
 
-        dump("Konkurs total: Added " . $newCount . ', unsaved ' . $unsavedCount);
-        if(self::$showInf) dump("    Konkurs_pi total: Added " . $RelNewCount . ', total ' . RelKonkursPi::count());
+        dump("Konkurs импорт завершен: добавлено " . $newCount . ', не добавлено ' . $unsavedCount);
+        if(self::$showInf) dump("    Konkurs_pi: добавлено " . $RelNewCount . ', всего ' . RelKonkursPi::count());
     }
 
     /**  Импорт записей из таблиц  ebd_gis.konkurs* */
@@ -67,10 +67,10 @@ class KonkursImportController extends Controller
             {
                 $newKonkurs = Konkurs::make([
                     'name' => $k->Название_у,
-                    'license_type_id' => $k->Тип_лиц ? DicLicenseType::where('value', $k->Тип_лиц)->first()?->id : null,
-                    'purpose_id' => $k->Цель ? DicPurpose::where('value', $k->Цель)->first()?->id : null,
+                    'license_type_id' => $k->Тип_лиц ? (DicLicenseType::where('value', $k->Тип_лиц)->first()?->id ?? self::getEx('license_type_id', $k->Тип_лиц)) : null,
+                    'purpose_id' => $k->Цель ? (DicPurpose::where('value', $k->Цель)->first()?->id ?? self::getEx('purpose_id',  $k->Цель)) : null,
                     'ryear' => self::getRYear($k->Год_включ),
-                    'comp_form_id' => $k->Ф_состязан ? DicCompForm::where('value', $k->Ф_состязан)->first()?->id : null,
+                    'comp_form_id' => $k->Ф_состязан ? (DicCompForm::where('value', $k->Ф_состязан)->first()?->id ?? self::getEx('comp_form_id',  $k->Ф_состязан)) : null,
                     'ssub_rf_id' => self::getSsubId($k->Регион),
                     's_konkurs' => $k->Площадь ? str_ireplace(['/', ',', ' '], '.', $k->Площадь) : null,
                     'prev_konkurs_id' => self::getPrevId($k->Название_у, self::getRYear($k->Год_включ)),
@@ -120,7 +120,10 @@ class KonkursImportController extends Controller
             }
         }
         
-        if(self::$showInf) dump("  Konkurs frm " . $konkursTableName .' ('.$konkursTableModel::count().') '.   ": Added " . $newCount . ', unsaved ' . $unsavedCount);
+        if(self::$showInf)
+        {
+            dump("Konkurs из таблицы $konkursTableName(".$konkursTableModel::count()."): добавлено $newCount, не добавлено $unsavedCount");
+        }
 
         return [$newCount, $unsavedCount, $RelNewCount];
     }
@@ -186,6 +189,16 @@ class KonkursImportController extends Controller
                 return null;
             }
         } 
+        return null;
+    }
+    private static function getEx($attrName, $attrVal)
+    {
+        if($attrVal)
+        {
+            echo("\tНеверная строка или не найдена запись для konkurs: $attrName : \"$attrVal\"
+            \t\r\n");
+        }
+        
         return null;
     }
 }

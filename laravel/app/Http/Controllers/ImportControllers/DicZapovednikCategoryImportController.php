@@ -24,9 +24,7 @@ class DicZapovednikCategoryImportController extends Controller
             if($ob->wasRecentlyCreated) $newCount++;
         }
         
-        //dump(self::getUniqueZapCategory());
-
-        dump("DicZapovednikiCategory: Added " . $newCount);
+        echo("\tDicZapovednikCategory: added $newCount, total: " . DicZapovednikCategory::count() . "\r\n");
     }
 
     /** 

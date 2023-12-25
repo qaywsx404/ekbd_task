@@ -37,7 +37,7 @@ class ZapovednikImportController extends Controller
         $a = self::importFromTable('ZapovednikiPt');
             $newCount += $a[0]; $unsavedCount += $a[1];
 
-        dump("Zapovednik total: Added " . $newCount . ', unsaved ' . $unsavedCount);
+        dump("Zapovednik импорт завершен: добавлено " . $newCount . ', не добавлено ' . $unsavedCount);
     }
 
     /**  Импорт записей из таблиц  ebd_gis.zapovedniki_* */
@@ -53,14 +53,14 @@ class ZapovednikImportController extends Controller
                 {
                     $newZap = Zapovednik::make([
                         'name' => $z->Название,
-                        'zapovednik_category_id' => $z->категория_ ? DicZapovednikCategory::where('value',  $z->категория_)->first()?->id : null,
-                        'zapovednik_importance_id' => $z->значение_о ? DicZapovednikImportance::where('value',  $z->значение_о)->first()?->id : null,
-                        'zapovednik_profile_id' => $z->Профиль ? DicZapovednikProfile::where('value',  $z->Профиль)->first()?->id : null,
-                        'zapovednik_state_id' => $z->Текущий_ст ? DicZapovednikState::where('value',  $z->Текущий_ст)->first()?->id : null,
-                        'ssub_rf_id' => self::getSsubId($z->Регион),
-                        's_zapovednik' => self::getS($z->Площадь_км),
-                        'ohr_zona' => self::getS($z->Охранная_з),
-                        'rdate' => self::getRDate($z->Дата_созда),
+                        'zapovednik_category_id' => $z->категория_ ? (DicZapovednikCategory::where('value',  $z->категория_)->first()?->id ?? self::getEx('zapovednik_category_id', $z->категория_)) : null,
+                        'zapovednik_importance_id' => $z->значение_о ? (DicZapovednikImportance::where('value',  $z->значение_о)->first()?->id ?? self::getEx('zapovednik_importance_id', $z->значение_о)): null,
+                        'zapovednik_profile_id' => $z->Профиль ? (DicZapovednikProfile::where('value',  $z->Профиль)->first()?->id ?? self::getEx('zapovednik_profile_id', $z->Профиль)) : null,
+                        'zapovednik_state_id' => $z->Текущий_ст ? (DicZapovednikState::where('value',  $z->Текущий_ст)->first()?->id ?? self::getEx('zapovednik_state_id', $z->Текущий_ст)) : null,
+                        'ssub_rf_id' => self::getSsubId($z->Регион, $z, $zapTableName),
+                        's_zapovednik' => self::getS($z->Площадь_км, 's_zapovednik', $zapTableName, $z),
+                        'ohr_zona' => self::getS($z->Охранная_з, 'ohr_zona', $zapTableName, $z),
+                        'rdate' => self::getRDate($z->Дата_созда, $zapTableName, $z),
                         'comment' => $z->Примечание,
                         'geom' => $z->geom
                     ]);
@@ -83,18 +83,22 @@ class ZapovednikImportController extends Controller
                 }
             }
 
-        if(self::$showInf) dump("   Zapovednik frm " . $zapTableName .' ('.$zapTableModel::count().') '.   ": Added " . $newCount . ', unsaved ' . $unsavedCount);
+        if(self::$showInf) dump("Zapovednik из таблицы " . $zapTableName .' ('.$zapTableModel::count().') '.   ": добавлено " . $newCount . ', не добавлено ' . $unsavedCount);
 
         return [$newCount, $unsavedCount];
     }
-    private static function getS(?string $strS) : ?float
+    private static function getS(?string $strS, $attr, $tableName, &$z) : ?float
     {
         if($strS != null && $strS != "")
         {
             $strS = str_ireplace([' ', ',', '..'], '.', $strS);
             if(str_contains($strS, '+'))
             {
-                if(self::$showInf) dump("       Неверное знаечние S строка: " . $strS . ' ->null');
+                if(self::$showInf)
+                {
+                    echo ("\t - Неверная строка для Zapovednik: $attr: \"$strS\"
+                    \r\t\tиз таблицы $tableName: gid: $z->gid, $z->Название, площадь: $z->Площадь_км, охр. зона: $z->Охранная_з\r\n");
+                }
                 return null;
             }
 
@@ -103,7 +107,7 @@ class ZapovednikImportController extends Controller
 
         return null;
     }
-    private static function getRDate(?string $str) : ?string
+    private static function getRDate(?string $str, $tableName, &$z) : ?string
     {
         if($str != null && $str != "")
         {
@@ -117,12 +121,16 @@ class ZapovednikImportController extends Controller
             if(strlen($str) == 10)
                 return $str;
 
-            if(self::$showInf) dump("       Дата неверного формата : " . $str . " ->null");
+            if(self::$showInf)
+            {
+                echo ("\t - Неверная строка для Zapovednik: rdate: \"$str\"
+                \r\t\tиз таблицы $tableName: gid: $z->gid,  $z->Название, площадь: $z->Площадь_км, охр. зона: $z->Охранная_з\r\n");
+            }
         }
         
         return null;
     }
-    private static function getSsubId(?string $ssub) : ?string {
+    private static function getSsubId(?string $ssub, &$zap, $tableName) : ?string {
         if($ssub)
         {
             $ssub = str_ireplace('облать', 'область', $ssub);
@@ -154,10 +162,21 @@ class ZapovednikImportController extends Controller
             if($ssubId) return $ssubId;
             else
             {
-                dump('        СФ не найден: ' . $ssub);
+                echo ("\t - Неверная строка или не найдена запись для Zapovednik: ssub_rf_id: \"$ssub\"
+                    \r\t\tиз таблицы $tableName: gid: $zap->gid, $zap->Название, регион: $zap->Регион\r\n");
                 return null;
             }
         } 
+        return null;
+    }
+    private static function getEx($attrName, $attrVal)
+    {
+        if($attrVal)
+        {
+            echo("\tНеверная строка или не найдена запись для Zapovednik: $attrName : \"$attrVal\"
+            \t\r\n");
+        }
+        
         return null;
     }
 }

@@ -26,11 +26,11 @@ class NgrImportController extends Controller
         $newCount = 0;
 
         Ngr::truncate();
-        if(self::$showInf) dump("   Ngr tr");
+        if(self::$showInf) echo("\tngr очищено\r\n");
 
         $newCount = self::importFromTable();
 
-        dump("Ngr total: Added " . $newCount . ' of ' . Ngr2019::count());
+        dump("Ngr импорт завершен: добавлено " . $newCount . ' из ' . Ngr2019::count());
     }
 
     /**  Импорт записей из таблицы  ebd_gis.ngr_2019 */
@@ -42,9 +42,9 @@ class NgrImportController extends Controller
             {
                 $newNgr = Ngr::create([
                     'name' => $n->district,
-                    'ngr_type_id' => $n->type_ngr ? DicNgrType::where('value', $n->type_ngr)->first()->id : null,
-                    'ngp_id' => $n->province ? Ngp::where('name', $n->province)->first()->id : null,
-                    'ngo_id' => $n->region ? Ngo::where('name', $n->region)->first()->id : null,
+                    'ngr_type_id' => $n->type_ngr ? (DicNgrType::where('value', $n->type_ngr)->first()->id ?? self::getEx('ngr_type_id', $n->type_ngr)) : null,
+                    'ngp_id' => $n->province ? (Ngp::where('name', $n->province)->first()->id ?? self::getEx('ngp_id', $n->province)): null,
+                    'ngo_id' => $n->region ? (Ngo::where('name', $n->region)->first()->id ?? self::getEx('ngo_id', $n->region)) : null,
                     'index_all' => $n->index_all,
                     'comment' => null,
                     'geom' => $n->geom
@@ -54,5 +54,16 @@ class NgrImportController extends Controller
             }
 
         return $newCount;
+    }
+
+    private static function getEx($attrName, $attrVal)
+    {
+        if($attrVal)
+        {
+            echo("\tНеверная строка или не найдена запись для Deposit: $attrName : \"$attrVal\"
+            \t\r\n");
+        }
+        
+        return null;
     }
 }

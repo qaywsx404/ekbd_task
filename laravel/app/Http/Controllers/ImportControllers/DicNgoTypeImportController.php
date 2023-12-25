@@ -22,9 +22,7 @@ class DicNgoTypeImportController extends Controller
             if($ob->wasRecentlyCreated) $newCount++;
         }
 
-        // dump(self::getUniqueTypes());
-
-        dump("DicNgoType: Added " . $newCount);
+        echo("\tDicNgoType: added $newCount, total: " . DicNgoType::count() . "\r\n");
     }
 
     /** 

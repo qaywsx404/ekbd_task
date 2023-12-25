@@ -24,9 +24,7 @@ class DicZapovednikStateImportController extends Controller
             if($ob->wasRecentlyCreated) $newCount++;
         }
         
-        // dump(self::getUniqueZapSt());
-
-        dump("DicZapovednikiState: Added " . $newCount);
+        echo("\tDicZapovednikState: added $newCount, total: " . DicZapovednikState::count() . "\r\n");
     }
 
     /** 

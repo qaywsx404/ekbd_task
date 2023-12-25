@@ -34,7 +34,7 @@ class DepositImportController extends Controller
 
         [$newCount, $unsavedCount] = self::importFromTable();
 
-        dump("Deposit total: Added " . $newCount . ', unsaved ' . $unsavedCount);
+        dump("Deposit импорт завершен: добавлено " . $newCount . ', не добавлено ' . $unsavedCount);
     }
 
     /**  Импорт записей из таблицы  ebd_gis.ng_mest */
@@ -50,20 +50,19 @@ class DepositImportController extends Controller
                 {
                     $newDeposit = Deposit::make([
                         'name' => $d->СПИСОК_МЕС,
-                        'deposit_type_id' => $d->Тип ? DicDepositType::where('value', $d->Тип)->first()?->id : null,
-                        'deposit_stage_id' => $d->Стадия ? DicDepositStage::where('value', $d->Стадия)->first()?->id : null,
+                        'deposit_type_id' => $d->Тип ? (DicDepositType::where('value', $d->Тип)->first()?->id ?? self::getEx($d, 'deposit_type_id', $d->Тип)) : null,
+                        'deposit_stage_id' => $d->Стадия ? (DicDepositStage::where('value', $d->Стадия)->first()?->id ?? self::getEx($d, 'deposit_stage_id', $d->Стадия)) : null,
                         'dyear' => $d->Год_откр,
-                        'oblast_ssub_rf_id' => self::getSsubId($d->Область),
-                        'okrug_ssub_rf_id' => self::getSsubId($d->Округ),
-                        'ngp_id' => $d->ngp ? Ngp::where('name', $d->ngp)->first()?->id : null,
-                        'ngo_id' => $d->ngo ? Ngo::where('name', $d->ngo)->first()?->id : null,
-                        'ngr_id' => $d->ngr ? Ngr::where('name', $d->ngr)->first()?->id : null,
-                        'arctic_zone_id' => $d->Аркт_зона ? DicArcticZone::where('value', $d->Аркт_зона)->first()?->id : null,
-                        'deposit_n_size_id' => $d->Извл_зап_Н ? DicDepositSize::where('value', $d->Извл_зап_Н)->first()?->id : null,
-                        'deposit_k_size_id' => $d->Извл_зап_К ? DicDepositSize::where('value', $d->Извл_зап_К)->first()?->id : null,
-                        'deposit_g_size_id' => $d->Геол_зап_Г ? DicDepositSize::where('value', $d->Геол_зап_Г)->first()?->id : null,
-                        'deposit_k_substance_id' => $d->Содержан_К ? DicDepositSubstance::where('value', $d->Содержан_К)->first()?->id : null,
-                        'comment' => $d->Комментар,
+                        'oblast_ssub_rf_id' => self::getSsubId($d->Область, 'oblast_ssub_rf_id', $d),
+                        'okrug_ssub_rf_id' => self::getSsubId($d->Округ, 'okrug_ssub_rf_id', $d),
+                        'ngp_id' => $d->ngp ? (Ngp::where('name', 'ilike', $d->ngp)->first()?->id ?? self::getEx($d, 'ngp_id', $d->ngp)) : null,
+                        'ngo_id' => self::getNgoId($d->ngo, $d),
+                        'ngr_id' => self::getNgrId($d->ngr, $d),
+                        'arctic_zone_id' => $d->Аркт_зона ? (DicArcticZone::where('value', $d->Аркт_зона)->first()?->id ?? self::getEx($d, 'arctic_zone_id', $d->Аркт_зона)) : null,
+                        'deposit_n_size_id' => $d->Извл_зап_Н ? (DicDepositSize::where('value', $d->Извл_зап_Н)->first()?->id ?? self::getEx($d, 'deposit_n_size_id', $d->Извл_зап_Н)) : null,
+                        'deposit_k_size_id' => $d->Извл_зап_К ? (DicDepositSize::where('value', $d->Извл_зап_К)->first()?->id ?? self::getEx($d,'deposit_k_size_id', $d->Извл_зап_К)) : null,
+                        'deposit_g_size_id' => $d->Геол_зап_Г ? (DicDepositSize::where('value', $d->Геол_зап_Г)->first()?->id ?? self::getEx($d, 'deposit_g_size_id', $d->Геол_зап_Г)) : null,
+                        'deposit_k_substance_id' => $d->Содержан_К ? (DicDepositSubstance::where('value', $d->Содержан_К)->first()?->id ?? self::getEx($d, 'deposit_k_substance_id', $d->Содержан_К)) : null,
                         'note' => $d->Примечание,
                         'geom' => $d->geom
                     ]);
@@ -88,11 +87,9 @@ class DepositImportController extends Controller
                 }
             }
 
-        if(self::$showInf) dump("   Deposit frm ng_mest" .' ('.NgMest::count().') '.  ": Added " . $newCount . ', unsaved ' . $unsavedCount);
-
         return [$newCount, $unsavedCount];
     }
-    private static function getSsubId(?string $ssub) : ?string {
+    private static function getSsubId(?string $ssub, string $attr, &$ngMest) : ?string {
         if($ssub)
         {
             if(str_contains($ssub, 'Шельф')) $ssub = 'Шельф';
@@ -107,10 +104,66 @@ class DepositImportController extends Controller
             if($ssubId) return $ssubId;
             else
             {
-                dump('        СФ не найден: ' . $ssub);
+                echo ("\t - Неверная строка или не найдена запись для Deposit: $attr: \"$ssub\"
+                    \r\t\tиз таблицы NgMest: gid: $ngMest->gid, $ngMest->СПИСОК_МЕС, область: $ngMest->Область, округ: $ngMest->Округ\r\n");
                 return null;
             }
         } 
+        return null;
+    }
+    private static function getNgoId(?string $ngo, &$ngMest) : ?string {
+        if($ngo)
+        {
+            $ngo = str_ireplace('  ', ' ', $ngo);
+            if($ngo == 'АРЛАНСКАЯ НГО') $ngo = 'АРЛАНСКАЯ  НГО'; //TODO
+            if($ngo == 'ЗАПАДНО-ПРЕДКАВКАЗСКАЯ ГНО') $ngo = 'ЗАПАДНО-ПРЕДКАВКАЗСКАЯ НГО';
+            if($ngo == 'ЗАПАДНО-ПРЕДКАВКАЗСКАЯ ГНО') $ngo = 'ЗАПАДНО-УРАЛЬСКАЯ ПГО';
+
+            $ngoId = Ngo::where('name', 'ilike', $ngo)->first()?->id;
+
+            if($ngoId)
+                return $ngoId;
+            
+            echo ("\t - Неверная строка или не найдена запись для Deposit: ngo_id: \"$ngo\"
+                    \r\t\tиз таблицы NgMest: gid: $ngMest->gid, $ngMest->СПИСОК_МЕС, ngo: $ngMest->ngo\r\n");
+            
+            return null;
+        } 
+        return null;
+    }
+    private static function getNgrId(?string $ngr, &$ngMest) : ?string {
+        if($ngr)
+        {
+            $ngr = str_ireplace('  ', ' ', $ngr);
+            $ngr = str_ireplace('ё', 'е', $ngr);
+            if($ngr == 'Северного борта и северо-западной центриклинали НГР') $ngr = 'СЕВЕРНОГО БОРТА И СЕВ.-ЗАПАДНОЙ ЦЕНТРИКЛИНАЛИ НГР';
+            if($ngr == 'Терско-Сунженский НГР') $ngr = 'ТЕРСКО-СУНЖЕНСКЙ НГР';
+            if($ngr == 'Черемшанско-Байтуганский НГР') $ngr = 'ЧЕРЕМШАНО-БАЙТУГАНСКИЙ НГР';
+
+            $ngrId = Ngr::where('name', 'ilike', $ngr)->first()?->id;
+
+            if($ngrId)
+                return $ngrId;
+            
+            echo ("\t - Неверная строка или не найдена запись для Deposit: ngr_id: \"$ngr\"
+                    \r\t\tиз таблицы NgMest: gid: $ngMest->gid, $ngMest->СПИСОК_МЕС, ngr: $ngMest->ngr\r\n");
+            
+            return null;
+        } 
+        return null;
+    }
+    private static function getEx(&$ngMest, $attrName, $attrVal)
+    {
+        if($attrVal)
+        {
+            $attrArr = $ngMest->attributesToArray();
+            unset($attrArr['geom']);
+            $ser = json_encode($attrArr, JSON_UNESCAPED_UNICODE);
+
+            echo("\tНеверная строка или не найдена запись для Deposit: $attrName : \"$attrVal\"
+            \tNgMest: $ser\r\n");
+        }
+        
         return null;
     }
 }

@@ -27,9 +27,7 @@ class DicCompFormImportController extends Controller
             if($ob->wasRecentlyCreated) $newCount++;
         }
 
-        //dump(self::getUniqueCompForms());
-
-        dump("DicCompForm: Added " . $newCount);
+        echo("\tDicCompForm: added $newCount, total: " . DicCompForm::count() . "\r\n");
     }
 
     /** 

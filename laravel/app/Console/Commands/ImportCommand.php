@@ -53,9 +53,12 @@ class ImportCommand extends Command
      */
     public function handle()
     {
+        $showInf = true;
+
         switch($this->argument('table')) {
             case null:
-                dump( 'Импорт всей бд' );
+                dump( 'Импорт БД:' );
+                echo("\vСловари:\r\n");
                 DicLicenceTypeImportController::import();
                 DicPiImportController::import();
                 DicPurposeImportController::import();
@@ -75,16 +78,18 @@ class ImportCommand extends Command
                 DicNgoTypeImportController::import();
                 DicNgrTypeImportController::import();
                 DicSsubRfImportController::import();
-                LicenseImportController::import();
-                FlangImportController::import();
-                NgpImportController::import();
-                NgoImportController::import();
-                NgrImportController::import();
-                DepositImportController::import();
-                KonkursImportController::import();
-                StructImportController::import();
-                ZapovednikImportController::import();
+                echo("\vСущности:\r\n");
+                LicenseImportController::import($showInf);
+                FlangImportController::import($showInf);
+                NgpImportController::import($showInf);
+                NgoImportController::import($showInf);
+                NgrImportController::import($showInf);
+                DepositImportController::import($showInf);
+                KonkursImportController::import($showInf);
+                StructImportController::import($showInf);
+                ZapovednikImportController::import($showInf);
                 dump( 'done' );
+                dump("Импорт БД завершен.");
                 break;
 
             case 'dic_license_type':
@@ -204,7 +209,7 @@ class ImportCommand extends Command
             // Сущности
 
             case 'license':
-                dump( 'Импорт license' );
+                //dump( 'Импорт license' );
                 LicenseImportController::import(true);
                 dump( 'done' );
                 break;  

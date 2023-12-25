@@ -22,9 +22,7 @@ class DicFlangStatusImportController extends Controller
             if($ob->wasRecentlyCreated) $newCount++;
         }
 
-        //dump(self::getUniqueFlangStatuses());
-
-        dump("DicFlangStatus: Added " . $newCount);
+        echo("\tDicFlangStatus: added $newCount, total: " . DicFlangStatus::count() . "\r\n");
     }
 
     /** 

@@ -27,7 +27,7 @@ class DicPiImportController extends Controller
             if($ob->wasRecentlyCreated) $newCount++;
         }
 
-        dump("DicPi: Added " . $newCount);
+        echo("\tDicPi: added $newCount, total: " . DicPi::count() . "\r\n");
     }
 
     /** 

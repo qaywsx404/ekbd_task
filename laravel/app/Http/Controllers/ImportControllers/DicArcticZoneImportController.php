@@ -11,7 +11,6 @@ use App\Models\ebd_gis\LicExpPln;
 use App\Models\ebd_gis\LicExpPt;
 use App\Models\ebd_gis\LicPln;
 use App\Models\ebd_gis\LicPt;
-use App\Models\ebd_gis\Konkurs19;
 use App\Models\ebd_gis\Konkurs20;
 use App\Models\ebd_gis\Konkurs21;
 use App\Models\ebd_gis\Konkurs22;
@@ -32,10 +31,8 @@ class DicArcticZoneImportController extends Controller
 
             if($ob->wasRecentlyCreated) $newCount++;
         }
-
-        //dump(self::getUniqueArcticZones());
-
-        dump("DicArcticZone: Added " . $newCount);
+        
+        echo("\tDicArcticZone: added $newCount, total: " . DicArcticZone::count() . "\r\n");
     }
 
     /** 
@@ -55,8 +52,6 @@ class DicArcticZoneImportController extends Controller
         foreach(LicPt::distinct("Аркт_зона")->pluck("Аркт_зона")->flatten() as $az)
             if($az != null ) $azs->add($az);
 
-        // foreach(Konkurs19::distinct("Арктическа")->pluck("Арктическа")->flatten() as $az)
-        //     if($az != null ) $azs->add($az);
         foreach(Konkurs20::distinct("Арктическа")->pluck("Арктическа")->flatten() as $az)
             if($az != null ) $azs->add($az);
         foreach(Konkurs21::distinct("Арктическа")->pluck("Арктическа")->flatten() as $az)

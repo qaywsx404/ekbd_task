@@ -31,7 +31,7 @@ class DicPurposeImportController extends Controller
             if($ob->wasRecentlyCreated) $newCount++;
         }
 
-        dump("DicPurposeType: Added " . $newCount);
+        echo("\tDicPurpose: added $newCount, total: " . DicPurpose::count() . "\r\n");
     }
 
     /** 

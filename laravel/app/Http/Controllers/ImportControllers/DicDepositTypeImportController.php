@@ -23,9 +23,7 @@ class DicDepositTypeImportController extends Controller
             if($ob->wasRecentlyCreated) $newCount++;
         }
 
-        //dump(self::getUniqueDepositTypes());
-
-        dump("DicDepositType: Added " . $newCount);
+        echo("\tDicDepositType: added $newCount, total: " . DicDepositType::count() . "\r\n");
     }
 
     /** 

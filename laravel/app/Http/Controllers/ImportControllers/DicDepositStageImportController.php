@@ -23,9 +23,7 @@ class DicDepositStageImportController extends Controller
             if($ob->wasRecentlyCreated) $newCount++;
         }
 
-        //dump(self::getUniqueDepositStages());
-
-        dump("DicDepositStage: Added " . $newCount);
+        echo("\tDicDepositStage: added $newCount, total: " . DicDepositStage::count() . "\r\n");
     }
 
     /** 

@@ -24,11 +24,11 @@ class NgpImportController extends Controller
         $newCount = 0;
 
         Ngp::truncate();
-        if(self::$showInf) dump("   Ngp tr");
+        if(self::$showInf) echo("\tngp очищено\r\n");
 
         $newCount = self::importFromTable();
 
-        dump("Ngp total: Added " . $newCount . ' of ' . Ngp2019::count());
+        dump("Ngp импорт завершен: добавлено " . $newCount . ' из ' . Ngp2019::count());
     }
 
     /**  Импорт записей из таблицы  ebd_gis.ngp_2019 */
@@ -40,7 +40,7 @@ class NgpImportController extends Controller
             {
                 $newNgp = Ngp::create([
                     'name' => $n->province,
-                    'ngp_type_id' => $n->type_ngp ? DicNgpType::where('value', $n->type_ngp)->first()->id : null,
+                    'ngp_type_id' => $n->type_ngp ? (DicNgpType::where('value', $n->type_ngp)->first()->id ?? self::getEx('ngp_type_id', $n->type_ngp)) : null,
                     'index_all' => $n->index_all,
                     'comment' => null,
                     'geom' => $n->geom
@@ -50,5 +50,16 @@ class NgpImportController extends Controller
             }
 
         return $newCount;
+    }
+
+    private static function getEx($attrName, $attrVal)
+    {
+        if($attrVal)
+        {
+            echo("\tНеверная строка или не найдена запись для Deposit: $attrName : \"$attrVal\"
+            \t\r\n");
+        }
+        
+        return null;
     }
 }

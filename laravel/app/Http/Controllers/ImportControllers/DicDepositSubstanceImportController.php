@@ -22,9 +22,7 @@ class DicDepositSubstanceImportController extends Controller
             if($ob->wasRecentlyCreated) $newCount++;
         }
 
-        //dump(self::getUniqueDepositSubstances());
-
-        dump("DicDepositSubstance: Added " . $newCount);
+        echo("\tDicDepositSubstance: added $newCount, total: " . DicDepositSubstance::count() . "\r\n");
     }
 
     /** 

@@ -29,7 +29,7 @@ class FlangImportController extends Controller
 
         [$newCount, $unsavedCount] = self::importFromTable();
 
-        dump("Flang total: Added " . $newCount . ', unsaved ' . $unsavedCount);
+        dump("Flang импорт завершен: добавлено " . $newCount . ', не добавлено ' . $unsavedCount);
     }
 
     /**  Импорт записей из таблицы  ebd_gis.flangi */
@@ -39,7 +39,7 @@ class FlangImportController extends Controller
 
             foreach(Flangi::all() as $f)
             {
-                $licAndDate = self::getLicIdAndRdate($f->Выдана_лиц);
+                $licAndDate = self::getLicIdAndRdate($f->Выдана_лиц, $f);
 
                 try
                 {
@@ -51,10 +51,10 @@ class FlangImportController extends Controller
                         'declarant' => $f->Заявитель,
                         'edate' => $f->Дата_экспе,
                         'resol' => $f->Резолюция_,
-                        'ssub_rf_id' => self::getSsubId($f->Регион),
+                        'ssub_rf_id' => self::getSsubId($f->Регион, $f),
                         'license_id' => $licAndDate ? $licAndDate[0] : null,
                         'rdate' => $licAndDate ? $licAndDate[1] : null,
-                        'flang_status_id' => $f->Статус_по_ ? DicFlangStatus::where('value', $f->Статус_по_)->first()->id : null,
+                        'flang_status_id' => $f->Статус_по_ ? (DicFlangStatus::where('value', $f->Статус_по_)->first()?->id ?? self::getEx($f->Статус_по_)) : null,
                         'comment' => $f->Примечание,
                         'geom' => $f->geom
                     ]);
@@ -69,6 +69,15 @@ class FlangImportController extends Controller
                     else
                     {
                         $unsavedCount++;
+
+                       if(self::$showInf)
+                        {
+                            $ff = Flang::where('src_hash', $newFlang->src_hash)->first();
+
+                            echo ("\t - Не сохранена строка с повторным hash: $newFlang->src_hash
+                            \r\t\tиз таблицы flangi: id: $f->id, $f->Название_у, $f->Фланг_мест
+                            \r\t\tсуществующая запись: id: $ff->id, $ff->name, $ff->deposit\r\n");
+                        }
                     }
                 }
                 catch(Exception $e)
@@ -79,12 +88,10 @@ class FlangImportController extends Controller
                 }
             }
 
-        if(self::$showInf) dump("   Flang frm flangi" .' ('.Flangi::count().') '.  ": Added " . $newCount . ', unsaved ' . $unsavedCount);
-
         return [$newCount, $unsavedCount];
     }
 
-    private static function getLicIdAndRdate(?string $licStr) : ?array
+    private static function getLicIdAndRdate(?string $licStr, &$f) : ?array
     {
         if(!$licStr) return null;
 
@@ -106,11 +113,15 @@ class FlangImportController extends Controller
         }
         else
         {
-            if(self::$showInf) dump('       Flangi: Ошибочная строка: ' . $licStr . ' лиц. и дата -> null');
+            if(self::$showInf)
+            {
+                echo("\tНеверная строка или не найдена запись для flang: rdate: \"$licStr\"
+                \tflangi: id: $f->id, $f->Название_у, выдана лиц.: $f->Выдана_лиц \r\n");
+            }
             return null;
         };
     }
-    private static function getSsubId(?string $ssub) : ?string {
+    private static function getSsubId(?string $ssub, &$flangi) : ?string {
         if($ssub)
         {
             if(str_contains($ssub, 'ХМАО')) $ssub = 'Ханты-Мансийский автономный округ';
@@ -125,10 +136,20 @@ class FlangImportController extends Controller
             if($ssubId) return $ssubId;
             else
             {
-                dump('        СФ не найден: ' . $ssub);
+                echo ("\t - Неверная строка или не найдена запись для Flang: 'ssub_rf_id': \"$ssub\"
+                    \r\t\tиз таблицы Flangi: gid: $flangi->gid, $flangi->Название_у, регион: $flangi->Регион\r\n");
                 return null;
             }
         } 
+        return null;
+    }
+    private static function getEx($attrVal)
+    {
+        if($attrVal)
+        {
+            echo("\tНеверная строка или не найдена запись для Flang: ");
+        }
+        
         return null;
     }
 }

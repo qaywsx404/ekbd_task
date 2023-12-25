@@ -24,9 +24,7 @@ class DicZapovednikProfileImportController extends Controller
             if($ob->wasRecentlyCreated) $newCount++;
         }
         
-        // dump(self::getUniqueZapPr());
-
-        dump("DicZapovednikiProfile: Added " . $newCount);
+        echo("\tDicZapovednikProfile: added $newCount, total: " . DicZapovednikProfile::count() . "\r\n");
     }
 
     /** 

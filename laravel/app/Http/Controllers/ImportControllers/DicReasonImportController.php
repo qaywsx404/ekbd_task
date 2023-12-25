@@ -26,7 +26,7 @@ class DicReasonImportController extends Controller
             if($ob->wasRecentlyCreated) $newCount++;
         }
 
-        dump("DicReason: Added " . $newCount);
+        echo("\tDicReason: added $newCount, total: " . DicReason::count() . "\r\n");
     }
 
     /** 

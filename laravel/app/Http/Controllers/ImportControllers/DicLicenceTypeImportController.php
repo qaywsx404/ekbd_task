@@ -26,7 +26,7 @@ class DicLicenceTypeImportController extends Controller
             if($ob->wasRecentlyCreated) $newCount++;
         }
 
-        dump("DicLicenseType: Added " . $newCount);
+        echo("\tDicLicenseType: added $newCount, total: " . DicLicenseType::count() . "\r\n");
     }
 
     /** 

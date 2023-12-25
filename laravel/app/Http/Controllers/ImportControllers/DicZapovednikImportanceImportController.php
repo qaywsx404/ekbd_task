@@ -24,9 +24,7 @@ class DicZapovednikImportanceImportController extends Controller
             if($ob->wasRecentlyCreated) $newCount++;
         }
         
-        //dump(self::getUniqueZapIm());
-
-        dump("DicZapovednikiImportance: Added " . $newCount);
+        echo("\tDicZapovednikImportance: added $newCount, total: " . DicZapovednikImportance::count() . "\r\n");
     }
 
     /** 
