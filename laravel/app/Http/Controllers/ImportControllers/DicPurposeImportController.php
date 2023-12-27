@@ -16,6 +16,7 @@ use App\Models\ebd_gis\Konkurs20;
 use App\Models\ebd_gis\Konkurs21;
 use App\Models\ebd_gis\Konkurs22;
 use App\Models\ebd_gis\Konkurs23;
+use Illuminate\Support\Facades\Log;
 
 class DicPurposeImportController extends Controller
 {
@@ -31,7 +32,9 @@ class DicPurposeImportController extends Controller
             if($ob->wasRecentlyCreated) $newCount++;
         }
 
-        echo("\tDicPurpose: added $newCount, total: " . DicPurpose::count() . "\r\n");
+        $mes = ("DicPurpose: added $newCount, total: " . DicPurpose::count());
+        echo "\t".$mes."\r\n";
+        Log::channel('importlog')->info($mes);
     }
 
     /** 

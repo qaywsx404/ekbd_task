@@ -12,12 +12,20 @@ use App\Models\ebd_ekbd\Struct;
 use App\Models\ebd_ekbd\dictionaries\DicArcticZone;
 use App\Models\ebd_ekbd\dictionaries\DicSsubRf;
 use App\Models\ebd_gis\NgStruct;
-use Exception;
+use Illuminate\Support\Facades\Log;
 
 class StructImportController extends Controller
 {
     /** Доп. инф. */
     private static $showInf = false;
+    /** Счетчики добавленных записей */
+    private static $newCount = 0;
+    /** Счетчики добавленных записей */
+    private static $updCount = 0;
+    /** Счетчики не добавленных записей */
+    private static $unsCount = 0;
+    /** Флаг ошибки */
+    private static $hasErr = false;
 
     /**
      * Начать импорт
@@ -28,119 +36,131 @@ class StructImportController extends Controller
     public static function import(bool $showInf = false)
     {
         self::$showInf = $showInf;
-        $newCount = $unsavedCount = 0;
-
-        [$newCount, $unsavedCount] = self::importFromTable();
-
-        dump("Struct импорт завершен: добавлено " . $newCount . ', не добавлено ' . $unsavedCount);
-    }
-
-    /**  Импорт записей из таблиц  ebd_gis.ng_struct */
-    private static function importFromTable() : array
-    {
-        $newCount = $unsavedCount = 0;
+        
+        if(self::$showInf)
+        {
+            dump("Импорт Struct:");
+            Log::channel('importlog')->info("Импорт Struct:");
+            $mes = "Очистка Struct: ".Struct::count();
+            dump($mes);
+            Log::channel('importlog')->info($mes);
+        }
 
         Struct::truncate();
 
-            foreach(NgStruct::all() as $s)
+        self::importFromTable();
+
+        if(self::$showInf)
+        {
+            $mes = ("Struct импорт завершен: добавлено " . self::$newCount . ', не добавлено ' . self::$unsCount);
+            dump($mes);
+            Log::channel('importlog')->info($mes);
+        }
+    }
+
+    /**  Импорт записей из таблиц  ebd_gis.ng_struct */
+    private static function importFromTable()
+    {
+        $newCount = $unsCount = 0;
+
+        foreach(NgStruct::all() as $s)
+        {
+            self::$hasErr = false;
+
+            $src_hash =md5($s->gid);
+
+            if(!Struct::where('src_hash', $src_hash)->exists())
             {
-                try
+                $newStruct = Struct::make([
+                    'src_hash' => $src_hash,
+                    'name' => $s->СПИСОК_СТР,
+                    'deposit_type_id' => $s->Тип ? (DicDepositType::where('value', $s->Тип)->first()?->id ?? self::getEx('deposit_type_id', $s->Тип, $s)) : null,
+                    'deposit_stage_id' => $s->Стадия ? (DicDepositStage::where('value', $s->Стадия)->first()?->id ?? self::getEx('deposit_stage_id',  $s->Стадия, $s)) : null,
+                    'ng_struct' => $s->Отложения,
+                    'oblast_ssub_rf_id' => self::getSsubId($s->Область, 'oblast_ssub_rf_id', $s),
+                    'okrug_ssub_rf_id' => self::getSsubId($s->Округ, 'okrug_ssub_rf_id', $s),
+                    'ngp_id' => $s->ngp ? (Ngp::where('name', $s->ngp)->first()?->id ?? self::getEx('ngp_id', $s->ngp, $s)) : null,
+                    'ngo_id' => $s->ngo ? (Ngo::where('name', 'ilike', $s->ngo)->first()?->id ?? self::getEx('ngo_id', $s->ngo, $s)) : null, //TODO - ilike
+                    'ngr_id' => self::getNgrId($s->ngr, $s),
+                    'arctic_zone_id' => $s->Аркт_зона ? (DicArcticZone::where('value',$s->Аркт_зона, $s)->first()?->id ?? self::getEx('arctic_zone_id', $s->Аркт_зона, $s)) : null,
+                    'syear' => $s->Год_ввода,
+                    'lastyear' => $s->Год_списан,
+                    'nf' => $s->НФ,
+                    'gr_n' => $s->Геол_рес_Н,
+                    'gr_g' => $s->Геол_рес_Г,
+                    'gr_k' => $s->Геол_рес_К,
+                    'ir_n' => $s->Извл_рес_Н,
+                    'ir_k' => $s->Извл_рес_К,
+                    'rdl_n' => $s->dл_рес_Н,
+                    'rdl_g' => $s->dл_рес_Г,
+                    'rdl_k' => $s->dл_рес_К,
+                    'comment' => $s->Примечание,
+                    'geom' => $s->geom
+                ]);
+
+                if(!self::$hasErr)
                 {
-                    $newStruct = Struct::make([
-                        'name' => $s->СПИСОК_СТР,
-                        'deposit_type_id' => $s->Тип ? DicDepositType::where('value', $s->Тип)->first()?->id : null,
-                        'deposit_stage_id' => $s->Стадия ? DicDepositStage::where('value', $s->Стадия)->first()?->id : null,
-                        'ng_struct' => $s->Отложения,
-                        'oblast_ssub_rf_id' => self::getSsubId($s->Область, 'oblast_ssub_rf_id', $s),
-                        'okrug_ssub_rf_id' => self::getSsubId($s->Округ, 'okrug_ssub_rf_id', $s),
-                        'ngp_id' => $s->ngp ? (Ngp::where('name', $s->ngp)->first()?->id ?? self::getEx($s, 'ngp_id', $s->ngp)) : null,
-                        'ngo_id' => $s->ngo ? (Ngo::where('name', 'ilike', $s->ngo)->first()?->id ?? self::getEx($s, 'ngo_id', $s->ngo)) : null,
-                        'ngr_id' => self::getNgrId($s->ngr, $s),
-                        'arctic_zone_id' => $s->Аркт_зона ? DicArcticZone::where('value',$s->Аркт_зона)->first()?->id : null,
-                        'syear' => $s->Год_ввода,
-                        'lastyear' => $s->Год_списан,
-                        'nf' => $s->НФ,
-                        'gr_n' => $s->Геол_рес_Н,
-                        'gr_g' => $s->Геол_рес_Г,
-                        'gr_k' => $s->Геол_рес_К,
-                        'ir_n' => $s->Извл_рес_Н,
-                        'ir_k' => $s->Извл_рес_К,
-                        'rdl_n' => $s->dл_рес_Н,
-                        'rdl_g' => $s->dл_рес_Г,
-                        'rdl_k' => $s->dл_рес_К,
-                        'comment' => $s->Примечание,
-                        'geom' => $s->geom
-                    ]);
-            
-                    $newStruct->src_hash = md5($s->gid);
-                    
-                    if(!Struct::where('src_hash', $newStruct->src_hash)->exists())
-                    {
-                        $newStruct->save();
-                        $newCount++;
-                    }
-                    else
-                    {
-                        $unsavedCount++;
-                    }
+                    $newStruct->save();
+                    $newCount++;
                 }
-                catch(Exception $e)
+                else
                 {
-                    dump($e->getMessage());
-                    dd($s);
-                    continue;
+                    $unsCount++;
                 }
             }
+        }
 
-        return [$newCount, $unsavedCount];
+        self::$newCount = self::$newCount + $newCount;
+        self::$unsCount = self::$unsCount + $unsCount;
+
+        return 0;
     }
-    private static function getSsubId(?string $ssub, string $attr, &$ngStruct) : ?string {
+    private static function getSsubId(?string $ssub, string $attrName, &$ngStruct) : ?string {
         if($ssub)
         {
-            if(str_contains($ssub, 'Шельф')) $ssub = 'Шельф';
-            if(str_contains($ssub, 'Сев.-Западный')) $ssub = 'Северо-Западный федеральный округ';
-            if(str_contains($ssub, 'Алания')) $ssub = 'Алания';
-            if(str_contains($ssub, 'Хакассия')) $ssub = 'Хакасия';
+            // if(str_contains($ssub, 'Шельф')) $ssub = 'Шельф';
+            // if(str_contains($ssub, 'Сев.-Западный')) $ssub = 'Северо-Западный федеральный округ';
+            // if(str_contains($ssub, 'Алания')) $ssub = 'Алания';
+            // if(str_contains($ssub, 'Хакассия')) $ssub = 'Хакасия';
 
             $ssubId = DicSsubRf::where('region_name', $ssub)
                                 ->orWhere('region_name', 'ilike', '%'.$ssub.'%')
                                 ->first()?->id;
             
-            if($ssubId) return $ssubId;
-            else
-            {
-                echo ("\t - Неверная строка или не найдена запись для struct: $attr: \"$ssub\"
-                    \r\t\tиз таблицы NgStruct: gid: $ngStruct->gid, $ngStruct->СПИСОК_СТР, область: $ngStruct->Область, округ: $ngStruct->Округ\r\n");
-                return null;
-            }
+            return $ssubId ?? self::getEx($attrName, $ssub, $ngStruct);
         } 
+
         return null;
     }
     private static function getNgrId(?string $ngr, &$ngStruct) : ?string {
         if($ngr)
         {
-            $ngr = str_ireplace('  ', ' ', $ngr);
-            $ngr = str_ireplace('ё', 'е', $ngr);
-            if($ngr == 'Черемшанско-Байтуганский НГР') $ngr = 'ЧЕРЕМШАНО-БАЙТУГАНСКИЙ НГР';
+            // $ngr = str_ireplace('  ', ' ', $ngr);
+            // $ngr = str_ireplace('ё', 'е', $ngr);
+            // if($ngr == 'Черемшанско-Байтуганский НГР') $ngr = 'ЧЕРЕМШАНО-БАЙТУГАНСКИЙ НГР';
 
             $ngrId = Ngr::where('name', 'ilike', $ngr)->first()?->id;
+            //$ngrId = Ngr::where('name', $ngr)->first()?->id; ??
 
-            if($ngrId)
-                return $ngrId;
-            
-            echo ("\t - Неверная строка или не найдена запись для Struct: ngr_id: \"$ngr\"
-                    \r\t\tиз таблицы NgStruct: gid: $ngStruct->gid, $ngStruct->СПИСОК_СТР, ngr: $ngStruct->ngr\r\n");
-            
-            return null;
+            return $ngrId ?? self::getEx('ngr_id', $ngr, $ngStruct);
         } 
+
         return null;
     }
-    private static function getEx(&$ngStruct, $attrName, $attrVal)
+    private static function getEx($attrName, $attrVal, &$ngStruct)
     {
         if($attrVal)
         {
-            echo("\t - Неверная строка или не найдена запись для Deposit: $attrName : \"$attrVal\"
-            \tNgStruct: gid: $ngStruct->gid, $ngStruct->СПИСОК_СТР, ngo: $ngStruct->ngo, ngr: $ngStruct->ngr, ngp: $ngStruct->ngp\r\n");
+            $attrArr = $ngStruct->attributesToArray();
+            unset($attrArr['geom']);
+            $ser = json_encode($attrArr, JSON_UNESCAPED_UNICODE);
+
+            $mes = ("- Неверная строка или не найдена запись для Struct: $attrName : \"$attrVal\"\r\nзапись из таблицы NgStruct: $ser\r\n");
+            
+            //echo "\v".$mes;
+            Log::channel('importerrlog')->error($mes);
+
+            self::$hasErr = true;
         }
         
         return null;

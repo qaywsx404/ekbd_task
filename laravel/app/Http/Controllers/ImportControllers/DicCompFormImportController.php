@@ -11,6 +11,7 @@ use App\Models\ebd_gis\Konkurs20;
 use App\Models\ebd_gis\Konkurs21;
 use App\Models\ebd_gis\Konkurs22;
 use App\Models\ebd_gis\Konkurs23;
+use Illuminate\Support\Facades\Log;
 
 
 class DicCompFormImportController extends Controller
@@ -27,7 +28,9 @@ class DicCompFormImportController extends Controller
             if($ob->wasRecentlyCreated) $newCount++;
         }
 
-        echo("\tDicCompForm: added $newCount, total: " . DicCompForm::count() . "\r\n");
+        $mes = ("DicCompForm: added $newCount, total: " . DicCompForm::count());
+        echo "\t".$mes."\r\n";
+        Log::channel('importlog')->info($mes);
     }
 
     /** 

@@ -17,6 +17,7 @@ use App\Models\ebd_gis\Konkurs22;
 use App\Models\ebd_gis\Konkurs23;
 use App\Models\ebd_gis\NgMest;
 use App\Models\ebd_gis\NgStruct;
+use Illuminate\Support\Facades\Log;
 
 class DicArcticZoneImportController extends Controller
 {
@@ -32,7 +33,9 @@ class DicArcticZoneImportController extends Controller
             if($ob->wasRecentlyCreated) $newCount++;
         }
         
-        echo("\tDicArcticZone: added $newCount, total: " . DicArcticZone::count() . "\r\n");
+        $mes = ("DicArcticZone: added $newCount, total: " . DicArcticZone::count());
+        echo "\t".$mes."\r\n";
+        Log::channel('importlog')->info($mes);
     }
 
     /** 

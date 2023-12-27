@@ -7,6 +7,7 @@ use Ds\Set;
 use App\Http\Controllers\Controller;
 use App\Models\ebd_ekbd\dictionaries\DicNgpType;
 use App\Models\ebd_gis\Ngp2019;
+use Illuminate\Support\Facades\Log;
 
 class DicNgpTypeImportController extends Controller
 {
@@ -22,7 +23,9 @@ class DicNgpTypeImportController extends Controller
             if($ob->wasRecentlyCreated) $newCount++;
         }
 
-        echo("\tDicNgpType: added $newCount, total: " . DicNgpType::count() . "\r\n");
+        $mes = ("DicNgpType: added $newCount, total: " . DicNgpType::count());
+        echo "\t".$mes."\r\n";
+        Log::channel('importlog')->info($mes);
     }
 
     /** 

@@ -7,6 +7,7 @@ use Ds\Set;
 use App\Http\Controllers\Controller;
 use App\Models\ebd_ekbd\dictionaries\DicFlangStatus;
 use App\Models\ebd_gis\Flangi;
+use Illuminate\Support\Facades\Log;
 
 class DicFlangStatusImportController extends Controller
 {
@@ -22,7 +23,9 @@ class DicFlangStatusImportController extends Controller
             if($ob->wasRecentlyCreated) $newCount++;
         }
 
-        echo("\tDicFlangStatus: added $newCount, total: " . DicFlangStatus::count() . "\r\n");
+        $mes = ("DicFlangStatus: added $newCount, total: " . DicFlangStatus::count());
+        echo "\t".$mes."\r\n";
+        Log::channel('importlog')->info($mes);
     }
 
     /** 

@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ebd_ekbd\dictionaries\DicDepositStage;
 use App\Models\ebd_gis\NgMest;
 use App\Models\ebd_gis\NgStruct;
+use Illuminate\Support\Facades\Log;
 
 class DicDepositStageImportController extends Controller
 {
@@ -23,7 +24,9 @@ class DicDepositStageImportController extends Controller
             if($ob->wasRecentlyCreated) $newCount++;
         }
 
-        echo("\tDicDepositStage: added $newCount, total: " . DicDepositStage::count() . "\r\n");
+        $mes = ("DicDepositStage: added $newCount, total: " . DicDepositStage::count());
+        echo "\t".$mes."\r\n";
+        Log::channel('importlog')->info($mes);
     }
 
     /** 

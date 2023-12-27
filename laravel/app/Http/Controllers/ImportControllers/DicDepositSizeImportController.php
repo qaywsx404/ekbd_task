@@ -7,6 +7,7 @@ use Ds\Set;
 use App\Http\Controllers\Controller;
 use App\Models\ebd_ekbd\dictionaries\DicDepositSize;
 use App\Models\ebd_gis\NgMest;
+use Illuminate\Support\Facades\Log;
 
 class DicDepositSizeImportController extends Controller
 {
@@ -22,7 +23,9 @@ class DicDepositSizeImportController extends Controller
             if($ob->wasRecentlyCreated) $newCount++;
         }
         
-        echo("\tDicDepositSize: added $newCount, total: " . DicDepositSize::count() . "\r\n");
+        $mes = ("DicDepositSize: added $newCount, total: " . DicDepositSize::count());
+        echo "\t".$mes."\r\n";
+        Log::channel('importlog')->info($mes);
     }
 
     /** 

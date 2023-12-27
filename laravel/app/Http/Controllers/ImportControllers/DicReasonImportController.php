@@ -11,6 +11,7 @@ use App\Models\ebd_gis\LicExpPln;
 use App\Models\ebd_gis\LicExpPt;
 use App\Models\ebd_gis\LicPln;
 use App\Models\ebd_gis\LicPt;
+use Illuminate\Support\Facades\Log;
 
 class DicReasonImportController extends Controller
 {
@@ -26,7 +27,9 @@ class DicReasonImportController extends Controller
             if($ob->wasRecentlyCreated) $newCount++;
         }
 
-        echo("\tDicReason: added $newCount, total: " . DicReason::count() . "\r\n");
+        $mes = ("DicReason: added $newCount, total: " . DicReason::count());
+        echo "\t".$mes."\r\n";
+        Log::channel('importlog')->info($mes);
     }
 
     /** 

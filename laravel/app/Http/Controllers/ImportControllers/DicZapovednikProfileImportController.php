@@ -9,6 +9,7 @@ use App\Models\ebd_ekbd\dictionaries\DicZapovednikProfile;
 use App\Models\ebd_gis\ZapovednikiLn;
 use App\Models\ebd_gis\ZapovednikiPln;
 use App\Models\ebd_gis\ZapovednikiPt;
+use Illuminate\Support\Facades\Log;
 
 class DicZapovednikProfileImportController extends Controller
 {
@@ -24,7 +25,9 @@ class DicZapovednikProfileImportController extends Controller
             if($ob->wasRecentlyCreated) $newCount++;
         }
         
-        echo("\tDicZapovednikProfile: added $newCount, total: " . DicZapovednikProfile::count() . "\r\n");
+        $mes = ("DicZapovednikProfile: added $newCount, total: " . DicZapovednikProfile::count());
+        echo "\t".$mes."\r\n";
+        Log::channel('importlog')->info($mes);
     }
 
     /** 

@@ -31,6 +31,7 @@ use App\Http\Controllers\ImportControllers\KonkursImportController;
 use App\Http\Controllers\ImportControllers\StructImportController;
 use App\Http\Controllers\ImportControllers\ZapovednikImportController;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 
 class ImportCommand extends Command
 {
@@ -46,7 +47,10 @@ class ImportCommand extends Command
      *
      * @var string
      */
-    protected $description = 'Импорт бд или отдельных таблиц. Параметр table - название заполняемой таблицы. Без параметра - заполнение всей БД';
+    protected $description = 'Импорт бд или отдельных таблиц. 
+    Параметр table - название заполняемой таблицы.
+    Без параметра - заполнение всей БД
+    clog - очистка логов импорта и ошибок импорта';
 
     /**
      * Execute the console command.
@@ -56,9 +60,18 @@ class ImportCommand extends Command
         $showInf = true;
 
         switch($this->argument('table')) {
+            // Очистка логов
+            case 'clog':
+                file_put_contents('storage/logs/import.log', '');
+                file_put_contents('storage/logs/importerr.log', '');
+                dump('import и importerr log очищены');
+                break;
+
             case null:
                 dump( 'Импорт БД:' );
+                Log::channel('importlog')->info("\vИмпорт БД");
                 echo("\vСловари:\r\n");
+                Log::channel('importlog')->info("Словари:");
                 DicLicenceTypeImportController::import();
                 DicPiImportController::import();
                 DicPurposeImportController::import();
@@ -79,6 +92,7 @@ class ImportCommand extends Command
                 DicNgrTypeImportController::import();
                 DicSsubRfImportController::import();
                 echo("\vСущности:\r\n");
+                Log::channel('importlog')->info("Сущности:");
                 LicenseImportController::import($showInf);
                 FlangImportController::import($showInf);
                 NgpImportController::import($showInf);
@@ -90,6 +104,7 @@ class ImportCommand extends Command
                 ZapovednikImportController::import($showInf);
                 dump( 'done' );
                 dump("Импорт БД завершен.");
+                Log::channel('importlog')->info("Импорт БД завершен");
                 break;
 
             case 'dic_license_type':

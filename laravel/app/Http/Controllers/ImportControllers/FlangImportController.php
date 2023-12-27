@@ -9,12 +9,22 @@ use App\Models\ebd_ekbd\dictionaries\DicSsubRf;
 use App\Models\ebd_ekbd\Flang;
 use App\Models\ebd_ekbd\License;
 use App\Models\ebd_gis\Flangi;
-use Exception;
+use Illuminate\Support\Facades\Log;
 
 class FlangImportController extends Controller
 {
-     /** Доп. инф. */
-     private static $showInf = false;
+    /** Доп. инф. */
+    private static $showInf = false;
+    /** Счетчики добавленных записей */
+    private static $newCount = 0;
+    /** Счетчики добавленных записей */
+    private static $updCount = 0;
+    /** Счетчики не добавленных записей */
+    private static $unsCount = 0;
+    /** Счетчики добавленных записей RelLicensePi */
+    private static $RelNewCount = 0;
+    /** Флаг ошибки */
+    private static $hasErr = false;
 
      /**
      * Начать импорт
@@ -25,73 +35,102 @@ class FlangImportController extends Controller
     public static function import(bool $showInf = false)
     {
         self::$showInf = $showInf;
-        $newCount = $unsavedCount = 0;
 
-        [$newCount, $unsavedCount] = self::importFromTable();
+        if(self::$showInf)
+        {
+            dump("Импорт Flang:");
+            Log::channel('importlog')->info("Импорт Flang:");
+        }
 
-        dump("Flang импорт завершен: добавлено " . $newCount . ', не добавлено ' . $unsavedCount);
+        self::importFromTable();
+
+        if(self::$showInf)
+        {
+            $mes = ("Flang импорт завершен: добавлено " . self::$newCount . ', обновлено ' . self::$updCount . ', не добавлено ' . self::$unsCount);
+            dump($mes);
+            Log::channel('importlog')->info($mes);
+        }
     }
 
     /**  Импорт записей из таблицы  ebd_gis.flangi */
-    private static function importFromTable() : array
+    private static function importFromTable()
     {
-        $newCount = $unsavedCount = 0;
+        $newCount = $updCount = $unsCount = 0;
 
-            foreach(Flangi::all() as $f)
+        foreach(Flangi::all() as $f)
+        {
+            self::$hasErr = false;
+
+            $src_hash = md5($f->id);
+            $licAndDate = self::getLicIdAndRdate($f->Выдана_лиц, $f);
+
+            if(!Flang::where('src_hash', $src_hash)->exists())
             {
-                $licAndDate = self::getLicIdAndRdate($f->Выдана_лиц, $f);
+                $newFlang = Flang::make([
+                    'src_hash' => $src_hash,
+                    'name' => $f->Название_у,
+                    'deposit' => $f->Фланг_мест,
+                    'isflang' => $f->Явл_фланго,
+                    's_flang' => $f->Площадь ? str_ireplace(',', '.', $f->Площадь) : null,
+                    'declarant' => $f->Заявитель,
+                    'edate' => $f->Дата_экспе,
+                    'resol' => $f->Резолюция_,
+                    'ssub_rf_id' => self::getSsubId($f->Регион, $f),
+                    'license_id' => $licAndDate ? $licAndDate[0] : null,
+                    'rdate' => $licAndDate ? $licAndDate[1] : null,
+                    'flang_status_id' => $f->Статус_по_ ? (DicFlangStatus::where('value', $f->Статус_по_)->first()?->id ?? self::getEx('flang_status_id', $f->Статус_по_, $f)) : null,
+                    'comment' => $f->Примечание,
+                    'geom' => $f->geom
+                ]);
 
-                try
+                if(!self::$hasErr)
                 {
-                    $newFlang = Flang::make([
-                        'name' => $f->Название_у,
-                        'deposit' => $f->Фланг_мест,
-                        'isflang' => $f->Явл_фланго,
-                        's_flang' => $f->Площадь ? str_ireplace(',', '.', $f->Площадь) : null,
-                        'declarant' => $f->Заявитель,
-                        'edate' => $f->Дата_экспе,
-                        'resol' => $f->Резолюция_,
-                        'ssub_rf_id' => self::getSsubId($f->Регион, $f),
-                        'license_id' => $licAndDate ? $licAndDate[0] : null,
-                        'rdate' => $licAndDate ? $licAndDate[1] : null,
-                        'flang_status_id' => $f->Статус_по_ ? (DicFlangStatus::where('value', $f->Статус_по_)->first()?->id ?? self::getEx($f->Статус_по_)) : null,
-                        'comment' => $f->Примечание,
-                        'geom' => $f->geom
-                    ]);
-
-                    $newFlang->src_hash = md5($f->id);
-
-                    if(!Flang::where('src_hash', $newFlang->src_hash)->exists())
-                    {
-                        $newFlang->save();
-                        $newCount++;
-                    }
-                    else
-                    {
-                        $unsavedCount++;
-
-                       if(self::$showInf)
-                        {
-                            $ff = Flang::where('src_hash', $newFlang->src_hash)->first();
-
-                            echo ("\t - Не сохранена строка с повторным hash: $newFlang->src_hash
-                            \r\t\tиз таблицы flangi: id: $f->id, $f->Название_у, $f->Фланг_мест
-                            \r\t\tсуществующая запись: id: $ff->id, $ff->name, $ff->deposit\r\n");
-                        }
-                    }
+                    $newFlang->save();
+                    $newCount++;
                 }
-                catch(Exception $e)
+                else
                 {
-                    dump($e->getMessage());
-                    dd($f);
-                    continue;
+                    $unsCount++;
                 }
             }
+            else
+            {
+                $curFlang = Flang::where('src_hash', $src_hash)->first();
 
-        return [$newCount, $unsavedCount];
+                $curFlang->name = $f->Название_у;
+                $curFlang->deposit = $f->Фланг_мест;
+                $curFlang->isflang = $f->Явл_фланго;
+                $curFlang->s_flang = $f->Площадь ? str_ireplace(',', '.', $f->Площадь) : null;
+                $curFlang->declarant = $f->Заявитель;
+                $curFlang->edate = $f->Дата_экспе;
+                $curFlang->resol = $f->Резолюция_;
+                $curFlang->ssub_rf_id = self::getSsubId($f->Регион, $f);
+                $curFlang->license_id = $licAndDate ? $licAndDate[0] : null;
+                $curFlang->rdate = $licAndDate ? $licAndDate[1] : null;
+                $curFlang->flang_status_id = $f->Статус_по_ ? (DicFlangStatus::where('value', $f->Статус_по_)->first()?->id ?? self::getEx('flang_status_id', $f->Статус_по_, $f)) : null;
+                $curFlang->comment = $f->Примечание;
+                $curFlang->geom = $f->geom;
+
+                if(!self::$hasErr)
+                {
+                    $curFlang->save();
+                    $updCount++;
+                }
+                else
+                {
+                    $unsCount++;
+                }
+            }
+        }
+
+        self::$newCount = self::$newCount + $newCount;
+        self::$updCount = self::$updCount + $updCount;
+        self::$unsCount = self::$unsCount + $unsCount;
+
+        return 0;
     }
 
-    private static function getLicIdAndRdate(?string $licStr, &$f) : ?array
+    private static function getLicIdAndRdate(?string $licStr, Flangi &$f) : ?array
     {
         if(!$licStr) return null;
 
@@ -106,48 +145,48 @@ class FlangImportController extends Controller
                             ->where('license_type_id',
                                 DicLicenseType::where('value', $licSplit[3])->first()->id
                             )
-                            ->first();
+                            ->first() ?? self::getEx('license_id', $licStr, $f);
             
             if($lic) return [$lic->id, str_ireplace(' ', '.', $licSplit[4])];
             else return [null, str_ireplace(' ', '.', $licSplit[4])];
         }
         else
         {
-            if(self::$showInf)
-            {
-                echo("\tНеверная строка или не найдена запись для flang: rdate: \"$licStr\"
-                \tflangi: id: $f->id, $f->Название_у, выдана лиц.: $f->Выдана_лиц \r\n");
-            }
-            return null;
+            return self::getEx('rdate', $licStr, $f);
         };
     }
     private static function getSsubId(?string $ssub, &$flangi) : ?string {
         if($ssub)
         {
-            if(str_contains($ssub, 'ХМАО')) $ssub = 'Ханты-Мансийский автономный округ';
-            if(str_contains($ssub, 'ЯНАО')) $ssub = 'Ямало-Ненецкий автономный округ';
-            if(str_contains($ssub, 'НАО')) $ssub = 'Ненецкий автономный округ';
-            if(str_contains($ssub, 'Чукотский АО')) $ssub = 'Чукотский автономный округ';
+            // if(str_contains($ssub, 'ХМАО')) $ssub = 'Ханты-Мансийский автономный округ';
+            // if(str_contains($ssub, 'ЯНАО')) $ssub = 'Ямало-Ненецкий автономный округ';
+            // if(str_contains($ssub, 'НАО')) $ssub = 'Ненецкий автономный округ';
+            // if(str_contains($ssub, 'Чукотский АО')) $ssub = 'Чукотский автономный округ';
 
             $ssubId = DicSsubRf::where('region_name', $ssub)
-                                ->orWhere('region_name', 'ilike', '%'.$ssub.'%')
-                                ->first()?->id;
+                                //->orWhere('region_name', 'ilike', '%'.$ssub.'%')
+                                ->orWhere('region_name', $ssub)
+                                ->first()?->id ?? self::getEx('ssub_rf_id', $ssub, $flangi);
             
-            if($ssubId) return $ssubId;
-            else
-            {
-                echo ("\t - Неверная строка или не найдена запись для Flang: 'ssub_rf_id': \"$ssub\"
-                    \r\t\tиз таблицы Flangi: gid: $flangi->gid, $flangi->Название_у, регион: $flangi->Регион\r\n");
-                return null;
-            }
+            return $ssubId;
         } 
+        
         return null;
     }
-    private static function getEx($attrVal)
+    private static function getEx($attrName, $attrVal, $flangX)
     {
         if($attrVal)
         {
-            echo("\tНеверная строка или не найдена запись для Flang: ");
+            $attrArr = $flangX->attributesToArray();
+            unset($attrArr['geom']);
+            $ser = json_encode($attrArr, JSON_UNESCAPED_UNICODE);
+
+            $mes = ("- Неверная строка или не найдена запись для Flang: $attrName : \"$attrVal\"\r\nзапись из таблицы Flangi: $ser\r\n");
+             - 
+            //echo "\v".$mes;
+            Log::channel('importerrlog')->error($mes);
+
+            self::$hasErr = true;
         }
         
         return null;

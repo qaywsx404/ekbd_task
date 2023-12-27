@@ -7,6 +7,7 @@ use Ds\Set;
 use App\Http\Controllers\Controller;
 use App\Models\ebd_ekbd\dictionaries\DicNgrType;
 use App\Models\ebd_gis\Ngr2019;
+use Illuminate\Support\Facades\Log;
 
 class DicNgrTypeImportController extends Controller
 {
@@ -22,7 +23,9 @@ class DicNgrTypeImportController extends Controller
             if($ob->wasRecentlyCreated) $newCount++;
         }
 
-        echo("\tDicNgrType: added $newCount, total: " . DicNgrType::count() . "\r\n");
+        $mes = ("DicNgrType: added $newCount, total: " . DicNgrType::count());
+        echo "\t".$mes."\r\n";
+        Log::channel('importlog')->info($mes);
     }
 
     /** 

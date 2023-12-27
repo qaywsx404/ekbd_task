@@ -7,6 +7,7 @@ use Ds\Set;
 use App\Http\Controllers\Controller;
 use App\Models\ebd_ekbd\dictionaries\DicNgoType;
 use App\Models\ebd_gis\Ngo2019;
+use Illuminate\Support\Facades\Log;
 
 class DicNgoTypeImportController extends Controller
 {
@@ -22,7 +23,9 @@ class DicNgoTypeImportController extends Controller
             if($ob->wasRecentlyCreated) $newCount++;
         }
 
-        echo("\tDicNgoType: added $newCount, total: " . DicNgoType::count() . "\r\n");
+        $mes = ("DicNgoType: added $newCount, total: " . DicNgoType::count());
+        echo "\t".$mes."\r\n";
+        Log::channel('importlog')->info($mes);
     }
 
     /** 

@@ -11,6 +11,7 @@ use App\Models\ebd_gis\LicExpPln;
 use App\Models\ebd_gis\LicExpPt;
 use App\Models\ebd_gis\LicPln;
 use App\Models\ebd_gis\LicPt;
+use Illuminate\Support\Facades\Log;
 
 class DicLicenceTypeImportController extends Controller
 {
@@ -26,7 +27,9 @@ class DicLicenceTypeImportController extends Controller
             if($ob->wasRecentlyCreated) $newCount++;
         }
 
-        echo("\tDicLicenseType: added $newCount, total: " . DicLicenseType::count() . "\r\n");
+        $mes = ("DicLicenseType: added $newCount, total: " . DicLicenseType::count());
+        echo "\t".$mes."\r\n";
+        Log::channel('importlog')->info($mes);
     }
 
     /** 

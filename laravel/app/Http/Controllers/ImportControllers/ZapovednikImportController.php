@@ -9,12 +9,21 @@ use App\Models\ebd_ekbd\dictionaries\DicZapovednikProfile;
 use App\Models\ebd_ekbd\dictionaries\DicZapovednikState;
 use App\Models\ebd_ekbd\dictionaries\DicSsubRf;
 use App\Models\ebd_ekbd\Zapovednik;
-use Exception;
+use DateTime;
+use Illuminate\Support\Facades\Log;
 
 class ZapovednikImportController extends Controller
 {
-    /** Доп. инф. */
-    private static $showInf = false;
+        /** Доп. инф. */
+        private static $showInf = false;
+        /** Счетчики добавленных записей */
+        private static $newCount = 0;
+        /** Счетчики добавленных записей */
+        private static $updCount = 0;
+        /** Счетчики не добавленных записей */
+        private static $unsCount = 0;
+        /** Флаг ошибки */
+        private static $hasErr = false;
 
     /**
      * Начать импорт
@@ -25,81 +34,117 @@ class ZapovednikImportController extends Controller
     public static function import(bool $showInf = false)
     {
         self::$showInf = $showInf;
-        $newCount = $unsavedCount = 0;
+        
+        if(self::$showInf)
+        {
+            dump("Импорт Zapovednik:");
+            Log::channel('importlog')->info("Импорт Zapovednik:");
+        }
 
         //zapovedniki_ln
-        $a = self::importFromTable('ZapovednikiLn');
-            $newCount += $a[0]; $unsavedCount += $a[1];
+        self::importFromTable('ZapovednikiLn');
         //zapovedniki_pln
-        $a = self::importFromTable('ZapovednikiPln');
-            $newCount += $a[0]; $unsavedCount += $a[1];
+        self::importFromTable('ZapovednikiPln');
         //zapovedniki_pt
-        $a = self::importFromTable('ZapovednikiPt');
-            $newCount += $a[0]; $unsavedCount += $a[1];
+        self::importFromTable('ZapovednikiPt');
 
-        dump("Zapovednik импорт завершен: добавлено " . $newCount . ', не добавлено ' . $unsavedCount);
+        if(self::$showInf)
+        {
+            $mes = ("Zapovednik импорт завершен: добавлено " . self::$newCount . ', обновлено ' . self::$updCount . ', не добавлено ' . self::$unsCount);
+            dump($mes);
+            Log::channel('importlog')->info($mes);
+        }
     }
 
     /**  Импорт записей из таблиц  ebd_gis.zapovedniki_* */
-    private static function importFromTable(string $zapTableName) : array
+    private static function importFromTable(string $zapTableName)
     {
-        $newCount = $unsavedCount = 0;
+        $newCount = $updCount = $unsCount = 0;
 
         $zapTableModel = new (trim('App\Models\ebd_gis\ ') . $zapTableName )();
 
-            foreach($zapTableModel::all() as $z)
+        foreach($zapTableModel::all() as $z)
+        {
+            self::$hasErr = false;
+
+            $src_hash = md5($z->number . $zapTableName);
+
+            if(!Zapovednik::where('src_hash', $src_hash)->exists())
             {
-                try
+                $newZap = Zapovednik::make([
+                    'src_hash' => $src_hash,
+                    'name' => $z->Название,
+                    'zapovednik_category_id' => $z->категория_ ? (DicZapovednikCategory::where('value',  $z->категория_)->first()?->id ?? self::getEx('zapovednik_category_id', $z->категория_, $z)) : null,
+                    'zapovednik_importance_id' => $z->значение_о ? (DicZapovednikImportance::where('value',  $z->значение_о)->first()?->id ?? self::getEx('zapovednik_importance_id', $z->значение_о, $z)): null,
+                    'zapovednik_profile_id' => $z->Профиль ? (DicZapovednikProfile::where('value',  $z->Профиль)->first()?->id ?? self::getEx('zapovednik_profile_id', $z->Профиль, $z)) : null,
+                    'zapovednik_state_id' => $z->Текущий_ст ? (DicZapovednikState::where('value',  $z->Текущий_ст)->first()?->id ?? self::getEx('zapovednik_state_id', $z->Текущий_ст, $z)) : null,
+                    'ssub_rf_id' => self::getSsubId($z->Регион, $z, $zapTableName),
+                    's_zapovednik' => self::getS($z->Площадь_км, 's_zapovednik', $zapTableName, $z),
+                    'ohr_zona' => self::getS($z->Охранная_з, 'ohr_zona', $zapTableName, $z),
+                    'rdate' => self::getRDate($z->Дата_созда, $zapTableName, $z),
+                    'comment' => $z->Примечание,
+                    'geom' => $z->geom
+                ]);
+
+                if(!self::$hasErr)
                 {
-                    $newZap = Zapovednik::make([
-                        'name' => $z->Название,
-                        'zapovednik_category_id' => $z->категория_ ? (DicZapovednikCategory::where('value',  $z->категория_)->first()?->id ?? self::getEx('zapovednik_category_id', $z->категория_)) : null,
-                        'zapovednik_importance_id' => $z->значение_о ? (DicZapovednikImportance::where('value',  $z->значение_о)->first()?->id ?? self::getEx('zapovednik_importance_id', $z->значение_о)): null,
-                        'zapovednik_profile_id' => $z->Профиль ? (DicZapovednikProfile::where('value',  $z->Профиль)->first()?->id ?? self::getEx('zapovednik_profile_id', $z->Профиль)) : null,
-                        'zapovednik_state_id' => $z->Текущий_ст ? (DicZapovednikState::where('value',  $z->Текущий_ст)->first()?->id ?? self::getEx('zapovednik_state_id', $z->Текущий_ст)) : null,
-                        'ssub_rf_id' => self::getSsubId($z->Регион, $z, $zapTableName),
-                        's_zapovednik' => self::getS($z->Площадь_км, 's_zapovednik', $zapTableName, $z),
-                        'ohr_zona' => self::getS($z->Охранная_з, 'ohr_zona', $zapTableName, $z),
-                        'rdate' => self::getRDate($z->Дата_созда, $zapTableName, $z),
-                        'comment' => $z->Примечание,
-                        'geom' => $z->geom
-                    ]);
-                    
-                    $newZap->src_hash = md5($z->number . $zapTableName);
-                
-                    if(!Zapovednik::where('src_hash', $newZap->src_hash)->exists())
-                    {
-                        $newZap->save();
-                        $newCount++;
-                    }
-                    else
-                    {
-                        $unsavedCount++;
-                    }
+                    $newZap->save();
+                    $newCount++;
                 }
-                catch(Exception $e)
+                else
                 {
-                    dd($e);
+                    $unsCount++;
                 }
             }
+            else
+            {
+                $curZap = Zapovednik::where('src_hash', $src_hash)->first();
 
-        if(self::$showInf) dump("Zapovednik из таблицы " . $zapTableName .' ('.$zapTableModel::count().') '.   ": добавлено " . $newCount . ', не добавлено ' . $unsavedCount);
+                $curZap->name = $z->Название;
+                $curZap->zapovednik_category_id = $z->категория_ ? (DicZapovednikCategory::where('value',  $z->категория_)->first()?->id ?? self::getEx('zapovednik_category_id', $z->категория_, $z)) : null;
+                $curZap->zapovednik_importance_id = $z->значение_о ? (DicZapovednikImportance::where('value',  $z->значение_о)->first()?->id ?? self::getEx('zapovednik_importance_id', $z->значение_о, $z)): null;
+                $curZap->zapovednik_profile_id = $z->Профиль ? (DicZapovednikProfile::where('value',  $z->Профиль)->first()?->id ?? self::getEx('zapovednik_profile_id', $z->Профиль, $z)) : null;
+                $curZap->zapovednik_state_id = $z->Текущий_ст ? (DicZapovednikState::where('value',  $z->Текущий_ст)->first()?->id ?? self::getEx('zapovednik_state_id', $z->Текущий_ст, $z)) : null;
+                $curZap->ssub_rf_id = self::getSsubId($z->Регион, $z, $zapTableName);
+                $curZap->s_zapovednik = self::getS($z->Площадь_км, 's_zapovednik', $zapTableName, $z);
+                $curZap->ohr_zona = self::getS($z->Охранная_з, 'ohr_zona', $zapTableName, $z);
+                $curZap->rdate = self::getRDate($z->Дата_созда, $zapTableName, $z);
+                $curZap->comment = $z->Примечание;
+                $curZap->geom = $z->geom;
 
-        return [$newCount, $unsavedCount];
+                if(!self::$hasErr)
+                {
+                    $curZap->save();
+                    $updCount++;
+                }
+                else
+                {
+                    $unsCount++;
+                }
+            }
+        }
+
+        if(self::$showInf)
+        {
+            $mes = "Zapovednik из таблицы $zapTableName(".$zapTableModel::count()."): добавлено $newCount, обновлено $updCount, не добавлено $unsCount";
+            dump($mes);
+            Log::channel('importlog')->info($mes);
+        }
+
+        self::$newCount = self::$newCount + $newCount;
+        self::$updCount = self::$updCount + $updCount;
+        self::$unsCount = self::$unsCount + $unsCount;
+
+        return 0;
     }
-    private static function getS(?string $strS, $attr, $tableName, &$z) : ?float
+    private static function getS(?string $strS, $attrName, $tableName, &$z) : ?float
     {
         if($strS != null && $strS != "")
         {
             $strS = str_ireplace([' ', ',', '..'], '.', $strS);
             if(str_contains($strS, '+'))
             {
-                if(self::$showInf)
-                {
-                    echo ("\t - Неверная строка для Zapovednik: $attr: \"$strS\"
-                    \r\t\tиз таблицы $tableName: gid: $z->gid, $z->Название, площадь: $z->Площадь_км, охр. зона: $z->Охранная_з\r\n");
-                }
-                return null;
+                return self::getEx($attrName, $strS, $tableName, $z);
             }
 
             return floatval($strS);
@@ -111,21 +156,12 @@ class ZapovednikImportController extends Controller
     {
         if($str != null && $str != "")
         {
-            //TODO
-            if($str == '19.041983') $str = '19.04.1983';
-            if($str == '07.16.1988') $str = '16.07.2988';
-            if($str == '21.08.1991.') $str = '21.08.1991';
-            if($str == '30.08.2017г.') $str = '30.08.2017';
-            if(strlen($str) == 4) $str = '01.01.'.$str;
-
-            if(strlen($str) == 10)
-                return $str;
-
-            if(self::$showInf)
+            if( (strlen($str) == 10) && ($d = DateTime::createFromFormat('d.m.Y', $str)) && !(($str[3] == '1') && ($str[4] > 2)) )
             {
-                echo ("\t - Неверная строка для Zapovednik: rdate: \"$str\"
-                \r\t\tиз таблицы $tableName: gid: $z->gid,  $z->Название, площадь: $z->Площадь_км, охр. зона: $z->Охранная_з\r\n");
+                return $str;
             }
+
+            return self::getEx('rdate', $str, $tableName, $z);
         }
         
         return null;
@@ -133,48 +169,51 @@ class ZapovednikImportController extends Controller
     private static function getSsubId(?string $ssub, &$zap, $tableName) : ?string {
         if($ssub)
         {
-            $ssub = str_ireplace('облать', 'область', $ssub);
-            $ssub = str_ireplace('  ', ' ', $ssub);
-            if(str_contains($ssub, 'Шельф')) $ssub = 'Шельф';
-            if(str_contains($ssub, 'Красноярский край')) $ssub = 'Красноярский край';
-            if(str_contains($ssub, 'Эвенкийский')) $ssub = 'Красноярский край';
-            if(str_contains($ssub, 'Алания')) $ssub = 'Алания';
-            if(str_contains($ssub, 'Волгоградская')) $ssub = 'Волгоградская';
-            if(str_contains($ssub, 'Ямало-Ненецкий')) $ssub = 'Ямало-Ненецкий';
-            if($ssub == 'Ненецкий АО') $ssub = 'Ненецкий автономный округ';
-            if(str_contains($ssub, 'о.Домашний')) $ssub = 'Красноярский край';
-            if(str_contains($ssub, 'Кандалакшский залив')) $ssub = 'Карелия'; // ?
-            if(str_contains($ssub, 'Югра')) $ssub = 'Югра';
-            if(str_contains($ssub, 'Камчатка')) $ssub = 'Камчатский край';
-            if(str_contains($ssub, 'Саратовская рбласть')) $ssub = 'Саратовская область';
-            if(str_contains($ssub, 'Таймырский (Долгано-Ненецкий) а.о')) $ssub = 'Красноярский край'; // ?
-            if(str_contains($ssub, 'Оренбурская область')) $ssub = 'Оренбургская область';
-            if(str_contains($ssub, 'п-ов Парижской Коммуны')) $ssub = 'Красноярский край';
-            if(str_contains($ssub, 'о.Октябрьской Революции')) $ssub = 'Красноярский край';
-            if(str_contains($ssub, 'Вологодская область Ярославская область')) $ssub = 'Вологодская область';
-            if(str_contains($ssub, 'Баштортостан')) $ssub = 'Башкортостан';
-            if(str_contains($ssub, 'о. Большевик')) $ssub = 'Красноярский край';
+            // $ssub = str_ireplace('облать', 'область', $ssub);
+            // $ssub = str_ireplace('  ', ' ', $ssub);
+            // if(str_contains($ssub, 'Шельф')) $ssub = 'Шельф';
+            // if(str_contains($ssub, 'Красноярский край')) $ssub = 'Красноярский край';
+            // if(str_contains($ssub, 'Эвенкийский')) $ssub = 'Красноярский край';
+            // if(str_contains($ssub, 'Алания')) $ssub = 'Алания';
+            // if(str_contains($ssub, 'Волгоградская')) $ssub = 'Волгоградская';
+            // if(str_contains($ssub, 'Ямало-Ненецкий')) $ssub = 'Ямало-Ненецкий';
+            // if($ssub == 'Ненецкий АО') $ssub = 'Ненецкий автономный округ';
+            // if(str_contains($ssub, 'о.Домашний')) $ssub = 'Красноярский край';
+            // if(str_contains($ssub, 'Кандалакшский залив')) $ssub = 'Карелия'; // ?
+            // if(str_contains($ssub, 'Югра')) $ssub = 'Югра';
+            // if(str_contains($ssub, 'Камчатка')) $ssub = 'Камчатский край';
+            // if(str_contains($ssub, 'Саратовская рбласть')) $ssub = 'Саратовская область';
+            // if(str_contains($ssub, 'Таймырский (Долгано-Ненецкий) а.о')) $ssub = 'Красноярский край'; // ?
+            // if(str_contains($ssub, 'Оренбурская область')) $ssub = 'Оренбургская область';
+            // if(str_contains($ssub, 'п-ов Парижской Коммуны')) $ssub = 'Красноярский край';
+            // if(str_contains($ssub, 'о.Октябрьской Революции')) $ssub = 'Красноярский край';
+            // if(str_contains($ssub, 'Вологодская область Ярославская область')) $ssub = 'Вологодская область';
+            // if(str_contains($ssub, 'Баштортостан')) $ssub = 'Башкортостан';
+            // if(str_contains($ssub, 'о. Большевик')) $ssub = 'Красноярский край';
 
             $ssubId = DicSsubRf::where('region_name', $ssub)
                                 ->orWhere('region_name', 'ilike', '%'.$ssub.'%')
                                 ->first()?->id;
             
-            if($ssubId) return $ssubId;
-            else
-            {
-                echo ("\t - Неверная строка или не найдена запись для Zapovednik: ssub_rf_id: \"$ssub\"
-                    \r\t\tиз таблицы $tableName: gid: $zap->gid, $zap->Название, регион: $zap->Регион\r\n");
-                return null;
-            }
+            return $ssubId ?? self::getEx('ssub_rf_id', $ssub, $tableName, $zap);
         } 
+
         return null;
     }
-    private static function getEx($attrName, $attrVal)
+    private static function getEx($attrName, $attrVal, $tableName, &$zapX)
     {
         if($attrVal)
         {
-            echo("\tНеверная строка или не найдена запись для Zapovednik: $attrName : \"$attrVal\"
-            \t\r\n");
+            $attrArr = $zapX->attributesToArray();
+            unset($attrArr['geom']);
+            $ser = json_encode($attrArr, JSON_UNESCAPED_UNICODE);
+
+            $mes = ("- Неверная строка или не найдена запись для Zapovednik: $attrName : \"$attrVal\"\r\nзапись из таблицы $tableName: $ser\r\n");
+            
+            //echo "\v".$mes;
+            Log::channel('importerrlog')->error($mes);
+
+            self::$hasErr = true;
         }
         
         return null;

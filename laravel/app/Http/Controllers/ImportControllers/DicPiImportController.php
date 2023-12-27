@@ -11,6 +11,7 @@ use App\Models\ebd_gis\LicExpPln;
 use App\Models\ebd_gis\LicExpPt;
 use App\Models\ebd_gis\LicPln;
 use App\Models\ebd_gis\LicPt;
+use Illuminate\Support\Facades\Log;
 
 
 class DicPiImportController extends Controller
@@ -27,7 +28,9 @@ class DicPiImportController extends Controller
             if($ob->wasRecentlyCreated) $newCount++;
         }
 
-        echo("\tDicPi: added $newCount, total: " . DicPi::count() . "\r\n");
+        $mes = ("DicPi: added $newCount, total: " . DicPi::count());
+        echo "\t".$mes."\r\n";
+        Log::channel('importlog')->info($mes);
     }
 
     /** 
