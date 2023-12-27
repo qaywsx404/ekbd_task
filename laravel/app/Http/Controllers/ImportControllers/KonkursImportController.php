@@ -60,6 +60,8 @@ class KonkursImportController extends Controller
         self::importFromTable('Konkurs22');
         //konkurs23
         self::importFromTable('Konkurs23');
+        //konkurs24
+        self::importFromTable('Konkurs24');
 
         if(self::$showInf)
         {
