@@ -74,10 +74,10 @@ class ZapovednikImportController extends Controller
                 $newZap = Zapovednik::make([
                     'src_hash' => $src_hash,
                     'name' => $z->Название,
-                    'zapovednik_category_id' => $z->категория_ ? (DicZapovednikCategory::where('value',  $z->категория_)->first()?->id ?? self::getEx('zapovednik_category_id', $z->категория_, $z)) : null,
-                    'zapovednik_importance_id' => $z->значение_о ? (DicZapovednikImportance::where('value',  $z->значение_о)->first()?->id ?? self::getEx('zapovednik_importance_id', $z->значение_о, $z)): null,
-                    'zapovednik_profile_id' => $z->Профиль ? (DicZapovednikProfile::where('value',  $z->Профиль)->first()?->id ?? self::getEx('zapovednik_profile_id', $z->Профиль, $z)) : null,
-                    'zapovednik_state_id' => $z->Текущий_ст ? (DicZapovednikState::where('value',  $z->Текущий_ст)->first()?->id ?? self::getEx('zapovednik_state_id', $z->Текущий_ст, $z)) : null,
+                    'zapovednik_category_id' => $z->категория_ ? (DicZapovednikCategory::where('value',  $z->категория_)->first()?->id ?? self::getEx('zapovednik_category_id', $z->категория_, $zapTableName, $z)) : null,
+                    'zapovednik_importance_id' => $z->значение_о ? (DicZapovednikImportance::where('value',  $z->значение_о)->first()?->id ?? self::getEx('zapovednik_importance_id', $z->значение_о, $zapTableName, $z)): null,
+                    'zapovednik_profile_id' => $z->Профиль ? (DicZapovednikProfile::where('value',  $z->Профиль)->first()?->id ?? self::getEx('zapovednik_profile_id', $z->Профиль, $zapTableName, $z)) : null,
+                    'zapovednik_state_id' => $z->Текущий_ст ? (DicZapovednikState::where('value',  $z->Текущий_ст)->first()?->id ?? self::getEx('zapovednik_state_id', $z->Текущий_ст, $zapTableName, $z)) : null,
                     'ssub_rf_id' => self::getSsubId($z->Регион, $z, $zapTableName),
                     's_zapovednik' => self::getS($z->Площадь_км, 's_zapovednik', $zapTableName, $z),
                     'ohr_zona' => self::getS($z->Охранная_з, 'ohr_zona', $zapTableName, $z),
@@ -101,10 +101,10 @@ class ZapovednikImportController extends Controller
                 $curZap = Zapovednik::where('src_hash', $src_hash)->first();
 
                 $curZap->name = $z->Название;
-                $curZap->zapovednik_category_id = $z->категория_ ? (DicZapovednikCategory::where('value',  $z->категория_)->first()?->id ?? self::getEx('zapovednik_category_id', $z->категория_, $z)) : null;
-                $curZap->zapovednik_importance_id = $z->значение_о ? (DicZapovednikImportance::where('value',  $z->значение_о)->first()?->id ?? self::getEx('zapovednik_importance_id', $z->значение_о, $z)): null;
-                $curZap->zapovednik_profile_id = $z->Профиль ? (DicZapovednikProfile::where('value',  $z->Профиль)->first()?->id ?? self::getEx('zapovednik_profile_id', $z->Профиль, $z)) : null;
-                $curZap->zapovednik_state_id = $z->Текущий_ст ? (DicZapovednikState::where('value',  $z->Текущий_ст)->first()?->id ?? self::getEx('zapovednik_state_id', $z->Текущий_ст, $z)) : null;
+                $curZap->zapovednik_category_id = $z->категория_ ? (DicZapovednikCategory::where('value',  $z->категория_)->first()?->id ?? self::getEx('zapovednik_category_id', $z->категория_, $zapTableName, $z)) : null;
+                $curZap->zapovednik_importance_id = $z->значение_о ? (DicZapovednikImportance::where('value',  $z->значение_о)->first()?->id ?? self::getEx('zapovednik_importance_id', $z->значение_о, $zapTableName, $z)): null;
+                $curZap->zapovednik_profile_id = $z->Профиль ? (DicZapovednikProfile::where('value',  $z->Профиль)->first()?->id ?? self::getEx('zapovednik_profile_id', $z->Профиль, $zapTableName, $z)) : null;
+                $curZap->zapovednik_state_id = $z->Текущий_ст ? (DicZapovednikState::where('value',  $z->Текущий_ст)->first()?->id ?? self::getEx('zapovednik_state_id', $z->Текущий_ст, $zapTableName, $z)) : null;
                 $curZap->ssub_rf_id = self::getSsubId($z->Регион, $z, $zapTableName);
                 $curZap->s_zapovednik = self::getS($z->Площадь_км, 's_zapovednik', $zapTableName, $z);
                 $curZap->ohr_zona = self::getS($z->Охранная_з, 'ohr_zona', $zapTableName, $z);
@@ -115,7 +115,7 @@ class ZapovednikImportController extends Controller
                 if(!self::$hasErr)
                 {
                     $curZap->save();
-                    $updCount++;
+                    $updCount++;  
                 }
                 else
                 {
