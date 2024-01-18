@@ -13,7 +13,9 @@ class ExportSsubRf extends Command
      *
      * @var string
      */
-    protected $signature = 'db:export-ssub-rf';
+    protected $signature = 'db:export-ssub-rf
+                            {--o|only : запись только встретившихся субъектов};
+                            {--i|information : вывод несопаставленных субъектов}';
 
     /**
      * The console command description.
@@ -27,7 +29,11 @@ class ExportSsubRf extends Command
      */
     public function handle()
     {
+        if($this->option('only')) DicSsubRfExport::$isOnlyEnc = true;
+        if($this->option('information')) DicSsubRfExport::$showInf = true;
+        
         Excel::store(new DicSsubRfExport, 'ekbd_sub_m.xlsx');
+        
         dump('done');
     }
 }

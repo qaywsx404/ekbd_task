@@ -10,14 +10,25 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class DicSsubRfExport implements FromArray
 {
+    //** Запись только встретившихся субъектов */
+    public static bool $isOnlyEnc = false;
+    //** Вывод несопоставленных субъектов */
+    public static bool $showInf = false;
+
+    
+    
     public function array() : array
     {
-        $xlsRowsArr = Excel::toArray(new SubXlsImport, 'ekbd_sub.xlsx');
-        $subNamesArr = self::getNamesOfDicSubs();
-
         $expRowsArr = [
-            ["code_region", "region_name", "code_region_parent", "is_fo", "is_sf", "names"]
+            ["code_region", "region_name", "code_region_parent", "is_fo", "is_sf", "aliases"]
         ];
+        
+        $xlsRowsArr = Excel::toArray(new SubXlsImport, 'storage/app/ekbd_sub_with_seashelves.xlsx');
+        $subNamesArr = self::getAliasesOfDicSubs();
+
+        //dd($subNamesArr);
+
+        if(self::$showInf) dump($subNamesArr['null']);
         
         foreach($xlsRowsArr[0] as $row)
         {
@@ -37,7 +48,7 @@ class DicSsubRfExport implements FromArray
     /** Массив суб(сл) -> [ его возможные названия ] 
      *  arr['null'] -> [ ненайденные субъекты ]
     */
-    private static function getNamesOfDicSubs() : array
+    private static function getAliasesOfDicSubs() : array
     {
         /** Все встреченные названия суб */
         $subs = DicSsubRfImportController::getUniqueSubs();
@@ -46,54 +57,58 @@ class DicSsubRfExport implements FromArray
         $dicSubs['null'] = [];
         foreach(DicSsubRf::all() as $dicSub)
         {
-            $dicSubs[$dicSub->region_name] = [$dicSub->region_name];   // - Добавляет исходное название сразу
-            //$dicSubs[$dicSub->region_name] = [];                     // - Учитывает только встретившиеся
+            if(self::$isOnlyEnc) $dicSubs[$dicSub->region_name] = [];           // - Добавляет исходное название сразу
+            else $dicSubs[$dicSub->region_name] = [$dicSub->region_name];       // - Учитывает только встретившиеся
         }
-        //dd($dicSubs);
 
         foreach($subs as $sub)
         {
-            $cSub = self::fixSub($sub);
+            $fSub = DicSsubRf::fixRegionName($sub);
+            $cSub = self::compSub($fSub);
             
-            $fSub = DicSsubRf::where('region_name', $cSub)
-                                ->orWhere('region_name', 'ilike', '%'.$cSub.'%')
+            $ssub_rf = DicSsubRf::where('region_name', 'ilike', $cSub)
+                                ->orWhere('region_name', 'ilike', $cSub.'%')
                                 ->first()?->region_name;
 
-            if($fSub)
+            if($ssub_rf)
             {
-                if(!in_array($sub, $dicSubs[$fSub]))
-                    array_push($dicSubs[$fSub], $sub);
+                if( (mb_strtoupper($ssub_rf) != mb_strtoupper($fSub)) && !self::in_array_non_reg($fSub , $dicSubs[$ssub_rf] ) )
+                    array_push($dicSubs[$ssub_rf], ($fSub));
             }
             else array_push($dicSubs['null'], $sub);
         }
-        //dd($dicSubs);
 
         return $dicSubs;
     }
-
-    private static function fixSub(string $sub) : string
+    //** Прописанное сопоставление */
+    private static function compSub(string $sub) : string
     {
-        if(str_contains($sub, 'Шельф')) return 'Шельф Российской Федерации';
+        if($sub == 'Шельф') return 'Шельф Российской Федерации';
         if(str_contains($sub, 'Красноярский край')) return 'Красноярский край';
         if(str_contains($sub, 'Калмыкия')) return 'Республика Калмыкия';
         if($sub == 'Республика Марий-Эл') return 'Республика Марий Эл';
-        if($sub == 'Республика Северная-Осетия' || $sub == 'Республика Северная Осетия-Алания' || $sub == 'Республика Северная Осетия и Алания') return 'Республика Северная Осетия - Алания';
+        if($sub == 'Республика Северная Осетия и Алания') return 'Республика Северная Осетия - Алания';
         if($sub == 'НАО' || $sub == 'Ненецкий АО') return 'Ненецкий автономный округ';
-        if($sub == 'ХМАО' || $sub == 'Ханты-Мансийский  автономный округ' || $sub == 'Ханты-Мансийский автономный округ — Югра') return 'Ханты-Мансийский автономный округ - Югра';
+        if($sub == 'ХМАО') return 'Ханты-Мансийский автономный округ - Югра';
         if($sub == 'Чукотский АО') return 'Чукотский автономный округ';
         if($sub == 'ЯНАО' || $sub == 'Ямало-Ненецкий АО') return 'Ямало-Ненецкий автономный округ';
-        if($sub == 'Республика Саха(Якутия)') return 'Республика Саха (Якутия)';
         if($sub == 'Крымский') return 'Республика Крым';
-        if($sub == 'Республика Хакасия' || $sub == 'Республика Хакассия') return 'Республика Хакасия';
         if($sub == 'Сев.-Западный') return 'Северо-Западный федеральный округ';
-        if($sub == 'Волгоградская обл.') return 'Волгоградская область';
         if($sub == 'Камчатка') return 'Камчатский край';
-        if($sub == 'Оренбурская область' || $sub == 'Оренбурская облать') return 'Оренбургская область';
-        if($sub == 'Республика Баштортостан') return 'Республика Башкортостан';
-        if($sub == 'Тюменская облать') return 'Тюменская область';
-        if($sub == 'Челябинская облать') return 'Челябинская область';
-        if($sub == 'Саратовская рбласть') return 'Саратовская область';
 
+        if($sub == 'Республика Северная-Осетия') return 'Республика Северная Осетия - Алания';
+        if($sub == 'Республика Хакассия') return 'Республика Хакасия';
+        
         return $sub;
+    }
+    private static function in_array_non_reg(string &$s, array &$arr) : bool
+    {
+        foreach($arr as $a)
+        {
+            if(mb_strtoupper($a) == mb_strtoupper($s))
+                return true;
+        }
+
+        return false;
     }
 }

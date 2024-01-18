@@ -5,6 +5,7 @@ namespace App\Http\Controllers\ImportControllers;
 use App\Http\Controllers\Controller;
 use App\Imports\DicSsubRfImport;
 use App\Models\ebd_ekbd\dictionaries\DicSsubRf;
+use App\Models\ebd_ekbd\dictionaries\DicSsubRfAlias;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Log;
 use Ds\Set;
@@ -31,9 +32,12 @@ class DicSsubRfImportController extends Controller
 {
     public static function import() {
         
-        Excel::import(new DicSsubRfImport, 'ekbd_sub.xlsx');
+        Excel::import(new DicSsubRfImport, 'storage/app/ekbd_sub_m.xlsx');
 
         $mes = ("DicSsubRf: total " . DicSsubRf::count());
+        echo "\t".$mes."\r\n";
+        Log::channel('importlog')->info($mes);
+        $mes = ("DicSsubRfAlias: total " . DicSsubRfAlias::count());
         echo "\t".$mes."\r\n";
         Log::channel('importlog')->info($mes);
     }

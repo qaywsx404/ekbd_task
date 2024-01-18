@@ -22,6 +22,7 @@
 -- 18.  Тип НГР (ngr_type)
 --
 -- 19. Справочник административно-территориальных образований
+-- 20. Справочник сокращений административно-территориальных образований
 
 
 
@@ -409,6 +410,27 @@ GRANT SELECT ON TABLE ebd_ekbd.dic_ssub_rf TO ebd_integro;
 COMMENT ON TABLE ebd_ekbd.dic_ssub_rf IS 'Справочник административно-территориальных образований';
 COMMENT ON COLUMN ebd_ekbd.dic_ssub_rf.cdate IS 'Дата создания';
 
+
+
+--------------------------------------------------------------------------
+--20. Справочник сокращений административно-территориальных образований --
+--------------------------------------------------------------------------
+--drop table ebd_ekbd.dic_ssub_rf_alias cascade
+CREATE TABLE IF NOT EXISTS ebd_ekbd.dic_ssub_rf_alias (
+    id uuid DEFAULT uuid_generate_v4(),
+    cdate timestamp DEFAULT now(),
+	ssub_rf_id uuid REFERENCES ebd_ekbd.dic_ssub_rf(id),
+    value character varying NOT NULL,
+    CONSTRAINT dic_ssub_rf_alias_pkey PRIMARY KEY (id)
+);
+
+ALTER TABLE IF EXISTS ebd_ekbd.dic_ssub_rf_alias OWNER to ebd;
+REVOKE ALL ON TABLE ebd_ekbd.dic_ssub_rf_alias FROM ebd_integro;
+GRANT ALL ON TABLE ebd_ekbd.dic_ssub_rf_alias TO ebd;
+GRANT SELECT ON TABLE ebd_ekbd.dic_ssub_rf_alias TO ebd_integro;
+
+COMMENT ON TABLE ebd_ekbd.dic_ssub_rf_alias IS 'Справочник сокращений административно-территориальных образований';
+COMMENT ON COLUMN ebd_ekbd.dic_ssub_rf_alias.cdate IS 'Дата создания';
 
 
 
