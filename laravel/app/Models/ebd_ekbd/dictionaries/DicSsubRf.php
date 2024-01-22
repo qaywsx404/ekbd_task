@@ -8,8 +8,10 @@ class DicSsubRf extends DictionaryModel
 
 
     
-    public static function findByRegionName(string $regionName) : ?DicSsubRf
+    public static function findByRegionName(?string $regionName) : ?DicSsubRf
     {
+        if( ($regionName == null) || ($regionName == "") )  return null;
+
         $res = null;
         
         $res = self::where('region_name','ilike', $regionName)
@@ -26,8 +28,10 @@ class DicSsubRf extends DictionaryModel
         return $res;
     }
 
-    public static function fixRegionName(string $regionName) : string
+    public static function fixRegionName(?string $regionName) : ?string
     {
+        if( !$regionName || $regionName == "" ) return null;
+        
         $regionName = preg_replace('/(\S)-Алания/m', "$1 - Алания", $regionName);
         $regionName = preg_replace('/(\S)\(/m', "$1 (", $regionName);
 

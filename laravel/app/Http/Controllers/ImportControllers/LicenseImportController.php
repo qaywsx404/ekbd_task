@@ -89,6 +89,8 @@ class LicenseImportController extends Controller
             $src_hash = md5($l->Серия . $l->Номер_лиц . $l->Тип);
             $prevLic = self::getPrevLicId($l->Старая_лиц, $licTableName, $l);
 
+            $ssub_rf_id = DicSsubRf::findByRegionName( DicSsubRf::fixRegionName($l->Назв_СФ) )?->id;
+
             if(!License::where('src_hash', $src_hash)->exists())
             {
                 $newLic = License::make([
@@ -109,7 +111,7 @@ class LicenseImportController extends Controller
                     'pcomp' => $l->Гол_предпр,
                     'prev_license_id' => $prevLic,
                     'ssub_rf_code' => $l->Код_СФ,
-                    'ssub_rf_id' => $l->Назв_СФ ? (DicSsubRf::where('region_name', $l->Назв_СФ)->first()?->id ?? self::getEx('ssub_rf_id', $l->Назв_СФ, $licTableName, $l)) : null,
+                    'ssub_rf_id' => $ssub_rf_id ?? self::getEx('ssub_rf_id', $l->Назв_СФ, $licTableName, $l),
                     'arctic_zone_id' => $l->Аркт_зона ? (DicArcticZone::where('value', $l->Аркт_зона)->first()?->id ?? self::getEx('arctic_zone_id', $l->Аркт_зона, $licTableName, $l)) : null,
                     's_license' => $l->s_лиц,
                     'comment' => $l->Примечание,
@@ -161,7 +163,7 @@ class LicenseImportController extends Controller
                 $curLic->pcomp = $l->Гол_предпр;
                 $curLic->prev_license_id = $prevLic; //TODO
                 $curLic->ssub_rf_code = $l->Код_СФ;
-                $curLic->ssub_rf_id = $l->Назв_СФ ? (DicSsubRf::where('region_name', $l->Назв_СФ)->first()?->id ?? self::getEx('ssub_rf_id', $l->Назв_СФ, $licTableName, $l)) : null;
+                $curLic->ssub_rf_id = $ssub_rf_id ?? self::getEx('ssub_rf_id', $l->Назв_СФ, $licTableName, $l);
                 $curLic->arctic_zone_id = $l->Аркт_зона ? (DicArcticZone::where('value', $l->Аркт_зона)->first()?->id ?? self::getEx('arctic_zone_id', $l->Аркт_зона, $licTableName, $l)) : null;
                 $curLic->s_license = $l->s_лиц;
                 $curLic->comment = $l->Примечание;

@@ -57,8 +57,19 @@ class DicSsubRfExport implements FromArray
         $dicSubs['null'] = [];
         foreach(DicSsubRf::all() as $dicSub)
         {
-            if(self::$isOnlyEnc) $dicSubs[$dicSub->region_name] = [];           // - Добавляет исходное название сразу
-            else $dicSubs[$dicSub->region_name] = [$dicSub->region_name];       // - Учитывает только встретившиеся
+            $splSub = self::splitRegionName($dicSub->region_name);
+            
+            if(count($splSub) > 1)
+            {
+                $dicSubs[ $splSub[0] ] = [];
+                array_push($dicSubs[ $splSub[0] ], $splSub[1]);
+                array_push($dicSubs[ $splSub[0] ], $splSub[2]);
+            }
+            else
+            {
+                if(self::$isOnlyEnc) $dicSubs[$dicSub->region_name] = [];           // - Учитывает только встретившиеся
+                else $dicSubs[$dicSub->region_name] = [$dicSub->region_name];       // - Добавляет исходное название сразу
+            }
         }
 
         foreach($subs as $sub)
@@ -73,14 +84,15 @@ class DicSsubRfExport implements FromArray
             if($ssub_rf)
             {
                 if( (mb_strtoupper($ssub_rf) != mb_strtoupper($fSub)) && !self::in_array_non_reg($fSub , $dicSubs[$ssub_rf] ) )
-                    array_push($dicSubs[$ssub_rf], ($fSub));
+                    array_push($dicSubs[$ssub_rf], $fSub);
             }
             else array_push($dicSubs['null'], $sub);
         }
 
         return $dicSubs;
     }
-    //** Прописанное сопоставление */
+    
+    /** Прописанное сопоставление */
     private static function compSub(string $sub) : string
     {
         if($sub == 'Шельф') return 'Шельф Российской Федерации';
@@ -95,11 +107,29 @@ class DicSsubRfExport implements FromArray
         if($sub == 'Крымский') return 'Республика Крым';
         if($sub == 'Сев.-Западный') return 'Северо-Западный федеральный округ';
         if($sub == 'Камчатка') return 'Камчатский край';
-
-        if($sub == 'Республика Северная-Осетия') return 'Республика Северная Осетия - Алания';
-        if($sub == 'Республика Хакассия') return 'Республика Хакасия';
         
         return $sub;
+    }
+    /** Разделяет название типа "1 - 2" и "1 (2)" */
+    private static function splitRegionName(string $name) : ?array
+    {
+        $res = [];
+
+        if(str_contains($name, '('))
+        {
+            $re = '/(.*) \((.*)\)/m';
+            preg_match($re, $name, $res);
+        }
+        else
+        {
+            $re = '/(.*) - (.*)/m';
+            preg_match($re, $name, $res);
+        }
+
+        if(count($res) > 1)
+            return $res;
+
+        return [$name];
     }
     private static function in_array_non_reg(string &$s, array &$arr) : bool
     {

@@ -394,7 +394,7 @@ COMMENT ON COLUMN ebd_ekbd.dic_ngr_type.cdate IS 'Дата создания';
 CREATE TABLE IF NOT EXISTS ebd_ekbd.dic_ssub_rf (
     id uuid DEFAULT uuid_generate_v4(),
     cdate timestamp DEFAULT now(),
-    code_region integer NOT NULL,
+    code_region integer,
 	region_name character varying NOT NULL,
 	code_region_parent integer,
 	is_fo integer,

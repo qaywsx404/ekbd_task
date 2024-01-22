@@ -64,6 +64,8 @@ class FlangImportController extends Controller
             $src_hash = md5($f->id);
             $licAndDate = self::getLicIdAndRdate($f->Выдана_лиц, $f);
 
+            $ssub_rf_id = DicSsubRf::findByRegionName( DicSsubRf::fixRegionName($f->Регион) )?->id;
+
             if(!Flang::where('src_hash', $src_hash)->exists())
             {
                 $newFlang = Flang::make([
@@ -75,7 +77,7 @@ class FlangImportController extends Controller
                     'declarant' => $f->Заявитель,
                     'edate' => $f->Дата_экспе,
                     'resol' => $f->Резолюция_,
-                    'ssub_rf_id' => self::getSsubId($f->Регион, $f),
+                    'ssub_rf_id' => $ssub_rf_id ?? self::getEx('ssub_rf_id', $f->Регион, $f),
                     'license_id' => $licAndDate ? $licAndDate[0] : null,
                     'rdate' => $licAndDate ? $licAndDate[1] : null,
                     'flang_status_id' => $f->Статус_по_ ? (DicFlangStatus::where('value', $f->Статус_по_)->first()?->id ?? self::getEx('flang_status_id', $f->Статус_по_, $f)) : null,
@@ -104,7 +106,7 @@ class FlangImportController extends Controller
                 $curFlang->declarant = $f->Заявитель;
                 $curFlang->edate = $f->Дата_экспе;
                 $curFlang->resol = $f->Резолюция_;
-                $curFlang->ssub_rf_id = self::getSsubId($f->Регион, $f);
+                $curFlang->ssub_rf_id = $ssub_rf_id ?? self::getEx('ssub_rf_id', $f->Регион, $f);
                 $curFlang->license_id = $licAndDate ? $licAndDate[0] : null;
                 $curFlang->rdate = $licAndDate ? $licAndDate[1] : null;
                 $curFlang->flang_status_id = $f->Статус_по_ ? (DicFlangStatus::where('value', $f->Статус_по_)->first()?->id ?? self::getEx('flang_status_id', $f->Статус_по_, $f)) : null;
@@ -145,7 +147,9 @@ class FlangImportController extends Controller
                             ->where('license_type_id',
                                 DicLicenseType::where('value', $licSplit[3])->first()->id
                             )
-                            ->first() ?? self::getEx('license_id', $licStr, $f);
+                            ->first() ; 
+                            //TODO
+                            // ?? self::getEx('license_id', $licStr, $f);  Вывод ошибки, если не найдена лицензия
             
             if($lic) return [$lic->id, str_ireplace(' ', '.', $licSplit[4])];
             else return [null, str_ireplace(' ', '.', $licSplit[4])];
@@ -154,24 +158,6 @@ class FlangImportController extends Controller
         {
             return self::getEx('rdate', $licStr, $f);
         };
-    }
-    private static function getSsubId(?string $ssub, &$flangi) : ?string {
-        if($ssub)
-        {
-            // if(str_contains($ssub, 'ХМАО')) $ssub = 'Ханты-Мансийский автономный округ';
-            // if(str_contains($ssub, 'ЯНАО')) $ssub = 'Ямало-Ненецкий автономный округ';
-            // if(str_contains($ssub, 'НАО')) $ssub = 'Ненецкий автономный округ';
-            // if(str_contains($ssub, 'Чукотский АО')) $ssub = 'Чукотский автономный округ';
-
-            $ssubId = DicSsubRf::where('region_name', $ssub)
-                                //->orWhere('region_name', 'ilike', '%'.$ssub.'%')
-                                ->orWhere('region_name', $ssub)
-                                ->first()?->id ?? self::getEx('ssub_rf_id', $ssub, $flangi);
-            
-            return $ssubId;
-        } 
-        
-        return null;
     }
     private static function getEx($attrName, $attrVal, $flangX)
     {

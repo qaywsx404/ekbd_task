@@ -69,6 +69,9 @@ class StructImportController extends Controller
 
             $src_hash =md5($s->gid);
 
+            $oblast_ssub_rf_id = DicSsubRf::findByRegionName( DicSsubRf::fixRegionName($s->Область) )?->id;
+            $okrug_ssub_rf_id = DicSsubRf::findByRegionName( DicSsubRf::fixRegionName($s->Округ) )?->id;
+
             if(!Struct::where('src_hash', $src_hash)->exists())
             {
                 $newStruct = Struct::make([
@@ -77,8 +80,8 @@ class StructImportController extends Controller
                     'deposit_type_id' => $s->Тип ? (DicDepositType::where('value', $s->Тип)->first()?->id ?? self::getEx('deposit_type_id', $s->Тип, $s)) : null,
                     'deposit_stage_id' => $s->Стадия ? (DicDepositStage::where('value', $s->Стадия)->first()?->id ?? self::getEx('deposit_stage_id',  $s->Стадия, $s)) : null,
                     'ng_struct' => $s->Отложения,
-                    'oblast_ssub_rf_id' => self::getSsubId($s->Область, 'oblast_ssub_rf_id', $s),
-                    'okrug_ssub_rf_id' => self::getSsubId($s->Округ, 'okrug_ssub_rf_id', $s),
+                    'oblast_ssub_rf_id' => $oblast_ssub_rf_id ?? self::getEx('ssub_rf_id', $s->Область, $s),
+                    'okrug_ssub_rf_id' => $okrug_ssub_rf_id ?? self::getEx('ssub_rf_id', $s->Округ, $s),
                     'ngp_id' => $s->ngp ? (Ngp::where('name', $s->ngp)->first()?->id ?? self::getEx('ngp_id', $s->ngp, $s)) : null,
                     'ngo_id' => $s->ngo ? (Ngo::where('name', 'ilike', $s->ngo)->first()?->id ?? self::getEx('ngo_id', $s->ngo, $s)) : null, //TODO - ilike
                     'ngr_id' => self::getNgrId($s->ngr, $s),
@@ -114,23 +117,6 @@ class StructImportController extends Controller
         self::$unsCount = self::$unsCount + $unsCount;
 
         return 0;
-    }
-    private static function getSsubId(?string $ssub, string $attrName, &$ngStruct) : ?string {
-        if($ssub)
-        {
-            // if(str_contains($ssub, 'Шельф')) $ssub = 'Шельф';
-            // if(str_contains($ssub, 'Сев.-Западный')) $ssub = 'Северо-Западный федеральный округ';
-            // if(str_contains($ssub, 'Алания')) $ssub = 'Алания';
-            // if(str_contains($ssub, 'Хакассия')) $ssub = 'Хакасия';
-
-            $ssubId = DicSsubRf::where('region_name', $ssub)
-                                ->orWhere('region_name', 'ilike', '%'.$ssub.'%')
-                                ->first()?->id;
-            
-            return $ssubId ?? self::getEx($attrName, $ssub, $ngStruct);
-        } 
-
-        return null;
     }
     private static function getNgrId(?string $ngr, &$ngStruct) : ?string {
         if($ngr)

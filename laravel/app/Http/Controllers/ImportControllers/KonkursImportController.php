@@ -43,6 +43,7 @@ class KonkursImportController extends Controller
         {
             dump("Импорт Konkurs:");
             Log::channel('importlog')->info("Импорт Konkurs:");
+            dump("Очистка Konkurs и RelKonkursPi");
             Log::channel('importlog')->info("Очистка Konkurs: ".Konkurs::count());
             Log::channel('importlog')->info("Очистка RelKonkursPi: ".RelKonkursPi::count());
         }
@@ -88,16 +89,18 @@ class KonkursImportController extends Controller
 
             $src_hash = md5($k->gid . $konkursTableName);
 
+            $ssub_rf_id = DicSsubRf::findByRegionName( DicSsubRf::fixRegionName($k->Регион) )?->id;
+
             if(!Konkurs::where('src_hash', $src_hash)->exists())
             {
                 $newKonkurs = Konkurs::make([
                     'src_hash' => $src_hash,
                     'name' => $k->Название_у,
-                    'license_type_id' => $k->Тип_лиц ? (DicLicenseType::where('value', $k->Тип_лиц)->first()?->id ?? self::getEx('license_type_id', $k->Тип_лиц)) : null,
-                    'purpose_id' => $k->Цель ? (DicPurpose::where('value', $k->Цель)->first()?->id ?? self::getEx('purpose_id',  $k->Цель)) : null,
+                    'license_type_id' => $k->Тип_лиц ? (DicLicenseType::where('value', $k->Тип_лиц)->first()?->id ?? self::getEx('license_type_id', $k->Тип_лиц, $konkursTableName, $k)) : null,
+                    'purpose_id' => $k->Цель ? (DicPurpose::where('value', $k->Цель)->first()?->id ?? self::getEx('purpose_id',  $k->Цель, $konkursTableName, $k)) : null,
                     'ryear' => self::getRYear($k->Год_включ),
-                    'comp_form_id' => $k->Ф_состязан ? (DicCompForm::where('value', $k->Ф_состязан)->first()?->id ?? self::getEx('comp_form_id',  $k->Ф_состязан)) : null,
-                    'ssub_rf_id' => self::getSsubId($k->Регион, $konkursTableName, $k),
+                    'comp_form_id' => $k->Ф_состязан ? (DicCompForm::where('value', $k->Ф_состязан)->first()?->id ?? self::getEx('comp_form_id',  $k->Ф_состязан, $konkursTableName, $k)) : null,
+                    'ssub_rf_id' => $ssub_rf_id ?? self::getEx('ssub_rf_id', $k->Регион, $konkursTableName, $k),
                     's_konkurs' => $k->Площадь ? str_ireplace(['/', ',', ' '], '.', $k->Площадь) : null,
                     'prev_konkurs_id' => self::getPrevId($k->Название_у, self::getRYear($k->Год_включ)),
                     'prev_txt' => $k->Переход,
@@ -195,26 +198,6 @@ class KonkursImportController extends Controller
             return $res[1][0];
         }
 
-        return null;
-    }
-    private static function getSsubId(?string $ssub, $tableName, $konkursX) : ?string {
-        if($ssub)
-        {
-            // if(str_contains($ssub, 'Шельф')) $ssub = 'Шельф Российской Федерации';
-            // if(str_contains($ssub, 'Ямало-Ненецкий АО')) $ssub = 'Ямало-Ненецкий автономный округ';
-            // if(str_contains($ssub, 'Республика Саха(Якутия)')) $ssub = 'Республика Саха';
-
-            $ssubId = DicSsubRf::where('region_name', $ssub)
-                                //->orWhere('region_name', 'ilike', '%'.$ssub.'%')
-                                ->orWhere('region_name', $ssub)
-                                ->first()?->id;
-            
-            if($ssubId) return $ssubId;
-            else
-            {
-                return self::getEx('ssub_rf_id', $ssub, $tableName, $konkursX);
-            }
-        } 
         return null;
     }
     private static function getEx($attrName, $attrVal, $tableName, &$konkursX)

@@ -48,6 +48,7 @@ class DepositImportController extends Controller
             dump("Импорт Deposit:");
             Log::channel('importlog')->info("Импорт Deposit:");
             Log::channel('importlog')->info("Очистка Deposit: ".Deposit::count());
+            dump("Очистка Deposit:");
         }
 
         Deposit::truncate();
@@ -73,6 +74,9 @@ class DepositImportController extends Controller
 
             $src_hash = md5($d->gid);
 
+            $oblast_ssub_rf_id = DicSsubRf::findByRegionName( DicSsubRf::fixRegionName($d->Область) )?->id;
+            $okrug_ssub_rf_id = DicSsubRf::findByRegionName( DicSsubRf::fixRegionName($d->Округ) )?->id;
+
             if(!Deposit::where('src_hash', $src_hash)->exists())
             {
                 $newDeposit = Deposit::make([
@@ -81,8 +85,8 @@ class DepositImportController extends Controller
                     'deposit_type_id' => $d->Тип ? (DicDepositType::where('value', $d->Тип)->first()?->id ?? self::getEx($d, 'deposit_type_id', $d->Тип)) : null,
                     'deposit_stage_id' => $d->Стадия ? (DicDepositStage::where('value', $d->Стадия)->first()?->id ?? self::getEx($d, 'deposit_stage_id', $d->Стадия)) : null,
                     'dyear' => $d->Год_откр,
-                    'oblast_ssub_rf_id' => self::getSsubId($d->Область, 'oblast_ssub_rf_id', $d),
-                    'okrug_ssub_rf_id' => self::getSsubId($d->Округ, 'okrug_ssub_rf_id', $d),
+                    'oblast_ssub_rf_id' => $oblast_ssub_rf_id ?? self::getEx('ssub_rf_id', $d->Область, $d),
+                    'okrug_ssub_rf_id' => $okrug_ssub_rf_id ?? self::getEx('ssub_rf_id', $d->Округ, $d),
                     'ngp_id' => $d->ngp ? (Ngp::where('name', 'ilike', $d->ngp)->first()?->id ?? self::getEx($d, 'ngp_id', $d->ngp)) : null,
                     'ngo_id' => self::getNgoId($d->ngo, $d),
                     'ngr_id' => self::getNgrId($d->ngr, $d),
@@ -122,22 +126,6 @@ class DepositImportController extends Controller
         self::$unsCount = self::$unsCount + $unsCount;   
 
         return 0;
-    }
-    private static function getSsubId(?string $ssub, string $attrName, &$ngMest) : ?string {
-        if($ssub)
-        {
-            // if(str_contains($ssub, 'Шельф')) $ssub = 'Шельф';
-            // if(str_contains($ssub, 'Алания')) $ssub = 'Алания';
-            // if(str_contains($ssub, 'Крымский')) $ssub = 'Крым';
-
-
-            $ssubId = DicSsubRf::where('region_name', $ssub)
-                                ->orWhere('region_name', 'ilike', '%'.$ssub.'%')
-                                ->first()?->id;
-            
-            return $ssubId ?? self::getEx($attrName, $ssub, $ngMest);
-        } 
-        return null;
     }
     private static function getNgoId(?string $ngo, &$ngMest) : ?string {
         if($ngo)
