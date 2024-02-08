@@ -2,11 +2,11 @@
 ----------------------------			Сущность: НГП			----------------------------
 ------------------------------------------------------------------------------------------------
 
---DROP TABLE IF EXISTS ebd_ekbd.ngp CASCADE
+--DROP TABLE IF EXISTS ekbd.ngp CASCADE
 
 BEGIN;
 
-CREATE TABLE IF NOT EXISTS ebd_ekbd.ngp (
+CREATE TABLE IF NOT EXISTS ekbd.ngp (
 	id uuid UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
 	gid bigserial,
 	vid uuid, 	
@@ -22,28 +22,28 @@ CREATE TABLE IF NOT EXISTS ebd_ekbd.ngp (
 	geom geometry(MultiPolygon, 987654),
 
 	CONSTRAINT ngp_pkey PRIMARY KEY (id),
-    CONSTRAINT ngp_vid_fkey FOREIGN KEY (vid) REFERENCES ebd_ekbd.ngp,  
-	CONSTRAINT ngp_dic_ngp_type_fkey FOREIGN KEY (ngp_type_id) REFERENCES ebd_ekbd.dic_ngp_type(id)
+    CONSTRAINT ngp_vid_fkey FOREIGN KEY (vid) REFERENCES ekbd.ngp,  
+	CONSTRAINT ngp_dic_ngp_type_fkey FOREIGN KEY (ngp_type_id) REFERENCES ekbd.dic_ngp_type(id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_ngp ON ebd_ekbd.ngp USING gist (geom) TABLESPACE pg_default;
+CREATE INDEX IF NOT EXISTS idx_ngp ON ekbd.ngp USING gist (geom) TABLESPACE pg_default;
 
-CREATE OR REPLACE TRIGGER ngp_mdate_update BEFORE UPDATE ON ebd_ekbd.ngp
+CREATE OR REPLACE TRIGGER ngp_mdate_update BEFORE UPDATE ON ekbd.ngp
     FOR EACH ROW
-    EXECUTE PROCEDURE ebd_ekbd.f_update_mdate();
+    EXECUTE PROCEDURE ekbd.f_update_mdate();
 
-ALTER TABLE IF EXISTS ebd_ekbd.ngp OWNER to ebd;
-REVOKE ALL ON TABLE ebd_ekbd.ngp FROM ebd_integro;
-GRANT ALL ON TABLE ebd_ekbd.ngp TO ebd;
-GRANT SELECT ON TABLE ebd_ekbd.ngp TO ebd_integro;
+--ALTER TABLE IF EXISTS ekbd.ngp OWNER to ebd;
+REVOKE ALL ON TABLE ekbd.ngp FROM ebd_integro;
+GRANT ALL ON TABLE ekbd.ngp TO ebd;
+GRANT SELECT ON TABLE ekbd.ngp TO ebd_integro;
 
-COMMENT ON TABLE ebd_ekbd.ngp IS 'НГП';
-COMMENT ON COLUMN ebd_ekbd.ngp.name IS 'Название';
-COMMENT ON COLUMN ebd_ekbd.ngp.ngp_type_id IS 'Тип';
-COMMENT ON COLUMN ebd_ekbd.ngp.index_all IS 'Индекс';
-COMMENT ON COLUMN ebd_ekbd.ngp.comment IS 'Примечание';
-COMMENT ON COLUMN ebd_ekbd.ngp.geom IS 'Геометрия';
-COMMENT ON COLUMN ebd_ekbd.ngp.cdate IS 'Дата создания';
-COMMENT ON COLUMN ebd_ekbd.ngp.mdate IS 'Дата модификации/обновления';
+COMMENT ON TABLE ekbd.ngp IS 'НГП';
+COMMENT ON COLUMN ekbd.ngp.name IS 'Название';
+COMMENT ON COLUMN ekbd.ngp.ngp_type_id IS 'Тип';
+COMMENT ON COLUMN ekbd.ngp.index_all IS 'Индекс';
+COMMENT ON COLUMN ekbd.ngp.comment IS 'Примечание';
+COMMENT ON COLUMN ekbd.ngp.geom IS 'Геометрия';
+COMMENT ON COLUMN ekbd.ngp.cdate IS 'Дата создания';
+COMMENT ON COLUMN ekbd.ngp.mdate IS 'Дата модификации/обновления';
 
 END;

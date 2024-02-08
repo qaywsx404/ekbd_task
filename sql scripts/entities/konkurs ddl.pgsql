@@ -2,11 +2,11 @@
 ---------------       Сущность: Участки, предлагаемые к лицензированию	    --------------------
 ------------------------------------------------------------------------------------------------
 
---DROP TABLE IF EXISTS ebd_ekbd.konkurs CASCADE
+--DROP TABLE IF EXISTS ekbd.konkurs CASCADE
 
 BEGIN;
 
-CREATE TABLE IF NOT EXISTS ebd_ekbd.konkurs
+CREATE TABLE IF NOT EXISTS ekbd.konkurs
 (
 	id uuid UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
 	gid bigserial,
@@ -37,47 +37,47 @@ CREATE TABLE IF NOT EXISTS ebd_ekbd.konkurs
 	geom geometry(MultiPolygon,7683),
 
 	CONSTRAINT konkurs_pkey PRIMARY KEY (id),
-    CONSTRAINT konkurs_vid_fkey FOREIGN KEY (vid) REFERENCES ebd_ekbd.konkurs,               
-	CONSTRAINT konkurs_license_type_fkey FOREIGN KEY (license_type_id) REFERENCES ebd_ekbd.dic_license_type(id),
-	CONSTRAINT konkurs_rel_konkurs_pi_fkey FOREIGN KEY (konkurs_pi_id) REFERENCES ebd_ekbd.rel_konkurs_pi(id),
-	CONSTRAINT konkurs_dic_purpose_fkey FOREIGN KEY (purpose_id) REFERENCES ebd_ekbd.dic_purpose(id),
-	CONSTRAINT konkurs_dic_comp_form_fkey FOREIGN KEY (comp_form_id) REFERENCES ebd_ekbd.dic_comp_form(id),
-	CONSTRAINT konkurs_dic_ssub_rf_fkey FOREIGN KEY (ssub_rf_id) REFERENCES ebd_ekbd.dic_ssub_rf(id),
-	CONSTRAINT konkurs_prev_konkurs_fkey FOREIGN KEY (prev_konkurs_id) REFERENCES ebd_ekbd.konkurs(id)
+    CONSTRAINT konkurs_vid_fkey FOREIGN KEY (vid) REFERENCES ekbd.konkurs,               
+	CONSTRAINT konkurs_license_type_fkey FOREIGN KEY (license_type_id) REFERENCES ekbd.dic_license_type(id),
+	CONSTRAINT konkurs_rel_konkurs_pi_fkey FOREIGN KEY (konkurs_pi_id) REFERENCES ekbd.rel_konkurs_pi(id),
+	CONSTRAINT konkurs_dic_purpose_fkey FOREIGN KEY (purpose_id) REFERENCES ekbd.dic_purpose(id),
+	CONSTRAINT konkurs_dic_comp_form_fkey FOREIGN KEY (comp_form_id) REFERENCES ekbd.dic_comp_form(id),
+	CONSTRAINT konkurs_dic_ssub_rf_fkey FOREIGN KEY (ssub_rf_id) REFERENCES ekbd.dic_ssub_rf(id),
+	CONSTRAINT konkurs_prev_konkurs_fkey FOREIGN KEY (prev_konkurs_id) REFERENCES ekbd.konkurs(id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_konkurs ON ebd_ekbd.konkurs USING gist (geom) TABLESPACE pg_default;
+CREATE INDEX IF NOT EXISTS idx_konkurs ON ekbd.konkurs USING gist (geom) TABLESPACE pg_default;
 
-CREATE OR REPLACE TRIGGER konkurs_mdate_update BEFORE UPDATE ON ebd_ekbd.konkurs
+CREATE OR REPLACE TRIGGER konkurs_mdate_update BEFORE UPDATE ON ekbd.konkurs
     FOR EACH ROW
-    EXECUTE PROCEDURE ebd_ekbd.f_update_mdate();
+    EXECUTE PROCEDURE ekbd.f_update_mdate();
 
-ALTER TABLE IF EXISTS ebd_ekbd.konkurs OWNER to ebd;
-REVOKE ALL ON TABLE ebd_ekbd.konkurs FROM ebd_integro;
-GRANT ALL ON TABLE ebd_ekbd.konkurs TO ebd;
-GRANT SELECT ON TABLE ebd_ekbd.konkurs TO ebd_integro;
+--ALTER TABLE IF EXISTS ekbd.konkurs OWNER to ebd;
+REVOKE ALL ON TABLE ekbd.konkurs FROM ebd_integro;
+GRANT ALL ON TABLE ekbd.konkurs TO ebd;
+GRANT SELECT ON TABLE ekbd.konkurs TO ebd_integro;
 
-COMMENT ON TABLE ebd_ekbd.konkurs IS 'Участки, предлагаемые к лицензированию';
-COMMENT ON COLUMN ebd_ekbd.konkurs.name IS 'Название';
-COMMENT ON COLUMN ebd_ekbd.konkurs.license_type_id IS 'Тип лицензии';
-COMMENT ON COLUMN ebd_ekbd.konkurs.konkurs_pi_id IS 'Полезное ископаемое';
-COMMENT ON COLUMN ebd_ekbd.konkurs.purpose_id IS 'Цель';
-COMMENT ON COLUMN ebd_ekbd.konkurs.ryear IS 'Год включения';
-COMMENT ON COLUMN ebd_ekbd.konkurs.comp_form_id IS 'Форма состязаний';
-COMMENT ON COLUMN ebd_ekbd.konkurs.ssub_rf_id IS 'Регион';
-COMMENT ON COLUMN ebd_ekbd.konkurs.S_konkurs IS 'Площадь';
-COMMENT ON COLUMN ebd_ekbd.konkurs.prev_konkurs_id IS 'Переходящий id';
-COMMENT ON COLUMN ebd_ekbd.konkurs.prev_txt IS 'Переходящий текст';
-COMMENT ON COLUMN ebd_ekbd.konkurs.arctic_zone_id IS 'Арктическая зона';
-COMMENT ON COLUMN ebd_ekbd.konkurs.reserves_n IS 'Запасы н.';
-COMMENT ON COLUMN ebd_ekbd.konkurs.reserves_g IS 'Запасы газа';
-COMMENT ON COLUMN ebd_ekbd.konkurs.reserves_k IS 'Запасы к.';
-COMMENT ON COLUMN ebd_ekbd.konkurs.resource_n IS 'Ресурсы н.';
-COMMENT ON COLUMN ebd_ekbd.konkurs.resource_g IS 'Ресурсы газа';
-COMMENT ON COLUMN ebd_ekbd.konkurs.resource_k IS 'Ресурсы к.';
-COMMENT ON COLUMN ebd_ekbd.konkurs.comment IS 'Примечание';
-COMMENT ON COLUMN ebd_ekbd.konkurs.geom IS 'Геометрия';
-COMMENT ON COLUMN ebd_ekbd.konkurs.cdate IS 'Дата создания';
-COMMENT ON COLUMN ebd_ekbd.konkurs.mdate IS 'Дата модификации/обновления';
+COMMENT ON TABLE ekbd.konkurs IS 'Участки, предлагаемые к лицензированию';
+COMMENT ON COLUMN ekbd.konkurs.name IS 'Название';
+COMMENT ON COLUMN ekbd.konkurs.license_type_id IS 'Тип лицензии';
+COMMENT ON COLUMN ekbd.konkurs.konkurs_pi_id IS 'Полезное ископаемое';
+COMMENT ON COLUMN ekbd.konkurs.purpose_id IS 'Цель';
+COMMENT ON COLUMN ekbd.konkurs.ryear IS 'Год включения';
+COMMENT ON COLUMN ekbd.konkurs.comp_form_id IS 'Форма состязаний';
+COMMENT ON COLUMN ekbd.konkurs.ssub_rf_id IS 'Регион';
+COMMENT ON COLUMN ekbd.konkurs.S_konkurs IS 'Площадь';
+COMMENT ON COLUMN ekbd.konkurs.prev_konkurs_id IS 'Переходящий id';
+COMMENT ON COLUMN ekbd.konkurs.prev_txt IS 'Переходящий текст';
+COMMENT ON COLUMN ekbd.konkurs.arctic_zone_id IS 'Арктическая зона';
+COMMENT ON COLUMN ekbd.konkurs.reserves_n IS 'Запасы н.';
+COMMENT ON COLUMN ekbd.konkurs.reserves_g IS 'Запасы газа';
+COMMENT ON COLUMN ekbd.konkurs.reserves_k IS 'Запасы к.';
+COMMENT ON COLUMN ekbd.konkurs.resource_n IS 'Ресурсы н.';
+COMMENT ON COLUMN ekbd.konkurs.resource_g IS 'Ресурсы газа';
+COMMENT ON COLUMN ekbd.konkurs.resource_k IS 'Ресурсы к.';
+COMMENT ON COLUMN ekbd.konkurs.comment IS 'Примечание';
+COMMENT ON COLUMN ekbd.konkurs.geom IS 'Геометрия';
+COMMENT ON COLUMN ekbd.konkurs.cdate IS 'Дата создания';
+COMMENT ON COLUMN ekbd.konkurs.mdate IS 'Дата модификации/обновления';
 
 END;
